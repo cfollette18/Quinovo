@@ -1,0 +1,35 @@
+objects:
+  Product:
+    - id: lipstick-1
+      name: Cherry lipstick
+  Person:
+    - id: bob
+      name: Bob
+    - id: neighbor
+      name: Neighbor
+  Company:
+    - id: amazon
+      name: Amazon
+    - id: ups
+      name: UPS
+  Package:
+    - id: 1Z999
+      status: in_transit
+      route_code: MEM1
+    - id: UPS001
+      status: in_transit
+
+links:
+  contains:
+    - from: 1Z999
+      to: lipstick-1
+  destined_for:
+    - from: 1Z999
+      to: bob
+    - from: UPS001
+      to: neighbor
+  shipped_by:
+    - from: 1Z999
+      to: amazon
+    - from: UPS001
+      to: ups

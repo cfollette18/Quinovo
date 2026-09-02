@@ -1,0 +1,91 @@
+from __future__ import annotations
+
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+RuleKind = Literal[
+    "forecast_fact",
+    "fact_link_fact",
+    "prefix_link",
+    "property_fact",
+    "join_links",
+]
+
+
+class InferenceModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class ForecastWhen(InferenceModel):
+    metric: str
+    point_gte: float
+
+
+class FactWhen(InferenceModel):
+    predicate: str
+    equals: str
+
+
+class PropertyWhen(InferenceModel):
+    api_name: str
+    equals: str
+
+
+class ThenFact(InferenceModel):
+    predicate: str
+    value: str
+
+
+class ThenLink(InferenceModel):
+    link_type: str
+    to_type: str
+    to_id: str
+
+
+class InferenceRule(InferenceModel):
+    api_name: str
+    kind: RuleKind
+    description: str = ""
+    source_type: str
+    confidence: float | Literal["forecast"] = 0.9
+    when_forecast: ForecastWhen | None = None
+    when_fact: FactWhen | None = None
+    when_property: PropertyWhen | None = None
+    when_link: str | None = None
+    when_links: list[str] = Field(default_factory=list)
+    when_pk_prefix: str | None = None
+    then_fact: ThenFact | None = None
+    then_link: ThenLink | None = None
+
+    @model_validator(mode="after")
+    def premises_match_kind(self) -> InferenceRule:
+        match self.kind:
+            case "forecast_fact":
+                if self.when_forecast is None or self.then_fact is None:
+                    raise ValueError(f"{self.api_name}: forecast_fact needs when_forecast and then_fact")
+            case "fact_link_fact":
+                if self.when_fact is None or self.when_link is None or self.then_fact is None:
+                    raise ValueError(
+                        f"{self.api_name}: fact_link_fact needs when_fact, when_link, then_fact"
+                    )
+            case "prefix_link":
+                if self.when_pk_prefix is None or self.then_link is None:
+                    raise ValueError(f"{self.api_name}: prefix_link needs when_pk_prefix and then_link")
+            case "property_fact":
+                if self.when_property is None or self.then_fact is None:
+                    raise ValueError(
+                        f"{self.api_name}: property_fact needs when_property and then_fact"
+                    )
+            case "join_links":
+                if len(self.when_links) < 2 or self.then_fact is None:
+                    raise ValueError(
+                        f"{self.api_name}: join_links needs when_links (2+) and then_fact"
+                    )
+            case _ as unreachable:
+                raise TypeError(f"unhandled rule kind: {unreachable}")
+        return self
+
+
+class InferenceRuleset(InferenceModel):
+    rules: list[InferenceRule] = Field(default_factory=list)

@@ -1,0 +1,18 @@
+{
+  "Self": {
+    "ID": "nxtal",
+    "HostName": "xtal",
+    "OS": "linux",
+    "Online": true,
+    "class": "workstation"
+  },
+  "Peer": {
+    "nheater": {
+      "ID": "nheater",
+      "HostName": "heater",
+      "OS": "linux",
+      "Online": true,
+      "class": "lab"
+    }
+  }
+}

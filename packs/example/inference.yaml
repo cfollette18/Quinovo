@@ -1,0 +1,68 @@
+# Typed inference over the commerce ontology.
+# These rules create facts that were not in the Amazon dump.
+
+rules:
+  - api_name: at_risk_if_late
+    kind: forecast_fact
+    description: >
+      If late_risk on the Package is at least 0.25, infer at_risk.
+      Confidence is the forecast's own score (HITL below 80%).
+    source_type: Package
+    confidence: forecast
+    when_forecast:
+      metric: late_risk
+      point_gte: 0.25
+    then_fact:
+      predicate: at_risk
+      value: "true"
+
+  - api_name: recommend_notify_buyer
+    kind: fact_link_fact
+    description: >
+      If the package is at_risk and has a buyer, recommend notify_buyer
+      naming that Person. This is deduction over a typed link, not a graph hop.
+    source_type: Package
+    confidence: 0.9
+    when_fact:
+      predicate: at_risk
+      equals: "true"
+    when_link: buyer
+    then_fact:
+      predicate: recommended_action
+      value: notify_buyer
+
+  - api_name: infer_amazon_from_1z
+    kind: prefix_link
+    description: >
+      Tracking ids starting 1Z are treated as Amazon in this example pack.
+      High confidence auto-asserts the shipped_by link if missing.
+    source_type: Package
+    confidence: 0.92
+    when_pk_prefix: "1Z"
+    then_link:
+      link_type: shipped_by
+      to_type: Company
+      to_id: amazon
+
+  - api_name: open_if_in_transit
+    kind: property_fact
+    description: Observed in_transit becomes an inferred open fact.
+    source_type: Package
+    confidence: 0.95
+    when_property:
+      api_name: status
+      equals: in_transit
+    then_fact:
+      predicate: open
+      value: "true"
+
+  - api_name: complete_story
+    kind: join_links
+    description: Package has both a buyer and a product — the story is complete.
+    source_type: Package
+    confidence: 0.95
+    when_links: [buyer, product]
+    then_fact:
+      predicate: story
+      value: complete
+

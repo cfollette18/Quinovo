@@ -1,0 +1,115 @@
+ontology:
+  api_name: example
+  display_name: Example commerce
+  description: >
+    Anyone's first pack: a package, what is in it, who bought it, who shipped it.
+    Not a homelab. Swap these nouns for your world.
+
+shared_properties:
+  - api_name: status
+    type: string
+    description: Lifecycle status shared across types that implement Trackable.
+
+interfaces:
+  - api_name: Trackable
+    description: Anything with a status an operator can stamp.
+    properties: [status]
+
+object_types:
+  - api_name: Package
+    primary_key: id
+    title_property: id
+    description: The box in transit.
+    implements: [Trackable]
+    properties:
+      - api_name: id
+        type: string
+        description: Tracking id
+      - api_name: buyer_notified
+        type: string
+        required: false
+        description: Set only by notify_buyer.
+      - api_name: route_code
+        type: string
+        required: false
+        description: Internal sort code. Hidden from customers.
+
+  - api_name: Product
+    primary_key: id
+    title_property: name
+    description: The thing in the box (for example lipstick).
+    properties:
+      - api_name: id
+        type: string
+      - api_name: name
+        type: string
+
+  - api_name: Person
+    primary_key: id
+    title_property: name
+    description: The buyer.
+    properties:
+      - api_name: id
+        type: string
+      - api_name: name
+        type: string
+
+  - api_name: Company
+    primary_key: id
+    title_property: name
+    description: The shipper.
+    properties:
+      - api_name: id
+        type: string
+      - api_name: name
+        type: string
+
+link_types:
+  - api_name: contains
+    from: Package
+    to: Product
+    from_name: product
+    to_name: packages
+    cardinality: many_to_one
+    description: Package contains a product.
+
+  - api_name: destined_for
+    from: Package
+    to: Person
+    from_name: buyer
+    to_name: packages
+    cardinality: many_to_one
+    description: Package is destined for a person.
+
+  - api_name: shipped_by
+    from: Package
+    to: Company
+    from_name: shipper
+    to_name: packages
+    cardinality: many_to_one
+    description: Package is shipped by a company.
+
+action_types:
+  - api_name: mark_delivered
+    description: The only legal way to mark a package delivered.
+    parameters:
+      - api_name: package
+        type: object
+        object_type: Package
+    edits:
+      - parameter: package
+        set:
+          status: delivered
+
+  - api_name: notify_buyer
+    description: Warn the person waiting on this package. MCP requires an asserted recommendation.
+    mcp_requires_recommendation: true
+    unattended: true
+    parameters:
+      - api_name: package
+        type: object
+        object_type: Package
+    edits:
+      - parameter: package
+        set:
+          buyer_notified: "true"

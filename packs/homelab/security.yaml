@@ -1,0 +1,11 @@
+roles:
+  operator:
+    types: ["*"]
+    actions: ["*"]
+    unattended_actions: [acknowledge_alert]
+
+bindings:
+  local:
+    role: operator
+  mcp-agent:
+    role: operator

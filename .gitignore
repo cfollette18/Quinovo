@@ -1,0 +1,19 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+*.pyc
+__pycache__/
+.venv/
+.data/
+dist/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.idea/
+.vscode/
+*.log
+node_modules/
+
+# Personal census (tailnet IPs / email). Not part of the public tree.
+research/homelab-census.md

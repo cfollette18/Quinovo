@@ -1,0 +1,91 @@
+ontology:
+  api_name: homelab
+  display_name: Homelab pack (dogfood)
+  description: >
+    Personal lab ontology. Not the Quinovo product. Engine must not import these nouns.
+
+shared_properties:
+  - api_name: status
+    type: string
+
+interfaces:
+  - api_name: Trackable
+    properties: [status]
+
+object_types:
+  - api_name: Person
+    primary_key: id
+    title_property: name
+    properties:
+      - api_name: id
+        type: string
+      - api_name: name
+        type: string
+
+  - api_name: Device
+    primary_key: id
+    title_property: hostname
+    implements: [Trackable]
+    description: Tailscale node. Primary key is node ID, not hostname.
+    properties:
+      - api_name: id
+        type: string
+      - api_name: hostname
+        type: string
+      - api_name: os
+        type: string
+      - api_name: presence
+        type: string
+      - api_name: class
+        type: string
+
+  - api_name: Service
+    primary_key: id
+    title_property: name
+    implements: [Trackable]
+    properties:
+      - api_name: id
+        type: string
+      - api_name: name
+        type: string
+      - api_name: bind
+        type: string
+        required: false
+
+  - api_name: Alert
+    primary_key: id
+    title_property: id
+    implements: [Trackable]
+    properties:
+      - api_name: id
+        type: string
+      - api_name: reason
+        type: string
+
+link_types:
+  - api_name: hosts
+    from: Device
+    to: Service
+    from_name: services
+    to_name: device
+    cardinality: one_to_many
+    description: Device hosts a service.
+
+  - api_name: alerts_on
+    from: Alert
+    to: Device
+    from_name: device
+    to_name: alerts
+    cardinality: many_to_one
+
+action_types:
+  - api_name: acknowledge_alert
+    description: The only legal way to close an Alert.
+    parameters:
+      - api_name: alert
+        type: object
+        object_type: Alert
+    edits:
+      - parameter: alert
+        set:
+          status: acked

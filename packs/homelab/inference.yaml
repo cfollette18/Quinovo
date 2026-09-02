@@ -1,0 +1,11 @@
+rules:
+  - api_name: lab_offline_alert
+    kind: property_fact
+    source_type: Device
+    confidence: 0.9
+    when_property:
+      api_name: presence
+      equals: offline
+    then_fact:
+      predicate: needs_attention
+      value: "true"

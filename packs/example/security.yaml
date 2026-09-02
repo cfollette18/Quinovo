@@ -1,0 +1,43 @@
+roles:
+  warehouse:
+    types: ["*"]
+    actions: ["*"]
+    unattended_actions: [notify_buyer]
+  amazon_dock:
+    types: [Package, Product, Person, Company]
+    actions: [mark_delivered, notify_buyer]
+    row_link:
+      Package: shipper
+  customer:
+    types: [Package, Product, Person]
+    actions: []
+    row_link:
+      Package: buyer
+    hide_properties:
+      Package: [route_code]
+
+bindings:
+  warehouse-agent:
+    role: warehouse
+  mcp-agent:
+    role: warehouse
+  local:
+    role: warehouse
+  quinovo-ai:
+    role: warehouse
+  dispatcher:
+    role: warehouse
+  warehouse:
+    role: warehouse
+  human:
+    role: warehouse
+  quinovo-proposer:
+    role: warehouse
+  cursor-agent:
+    role: warehouse
+  bob:
+    role: customer
+    as_object: Person:bob
+  amazon-dock:
+    role: amazon_dock
+    as_object: Company:amazon
