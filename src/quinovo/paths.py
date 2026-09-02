@@ -12,6 +12,5 @@ def discover_root() -> Path:
 
 ROOT = discover_root()
 EXAMPLE_PACK = ROOT / "packs" / "example"
-HOMELAB_PACK = ROOT / "packs" / "homelab"
 CLINIC_PACK = ROOT / "packs" / "clinic"
 DEFAULT_DB = ROOT / ".data" / "quinovo.sqlite"

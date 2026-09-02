@@ -15,5 +15,8 @@ dist/
 *.log
 node_modules/
 
-# Personal census (tailnet IPs / email). Not part of the public tree.
-research/homelab-census.md
+# Local notes and dogfood — not the public GitHub identity.
+research/
+packs/homelab/
+tests/test_homelab.py
+docs/plans/

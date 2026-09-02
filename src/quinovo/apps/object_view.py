@@ -1,4 +1,4 @@
-"""Generated Object View. The button is the action. Not Workshop."""
+"""Generated Object View. The button is the action."""
 
 from __future__ import annotations
 

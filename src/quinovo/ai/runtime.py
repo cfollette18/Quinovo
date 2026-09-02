@@ -110,7 +110,7 @@ def write_forecast(
     q10: float | None = None,
     q90: float | None = None,
 ) -> Forecast:
-    """Palantir-style: prediction is a measure on the object, with lineage."""
+    """A forecast is a measure on the object, with lineage."""
     try:
         requires_hitl(confidence, store.ontology.ontology.auto_apply_min_confidence)
     except ValueError as exc:

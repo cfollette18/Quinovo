@@ -3,7 +3,7 @@ ontology:
   display_name: Example commerce
   description: >
     Anyone's first pack: a package, what is in it, who bought it, who shipped it.
-    Not a homelab. Swap these nouns for your world.
+    Swap these nouns for your world.
 
 shared_properties:
   - api_name: status

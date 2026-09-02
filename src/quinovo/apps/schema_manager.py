@@ -1,4 +1,4 @@
-"""Schema manager: look at types as YAML. Not Ontology Manager / Workshop."""
+"""Schema manager: look at types as YAML."""
 
 from __future__ import annotations
 

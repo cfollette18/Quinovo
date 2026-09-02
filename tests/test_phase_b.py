@@ -4,9 +4,7 @@ from quinovo.initpack import init_pack
 from quinovo.kernel import open_kernel
 from quinovo.language.load import load_ontology
 from quinovo.adapters import adk_function_tools, hermes_skill
-from quinovo.funnel.tailscale import ingest_tailscale_fixture
-from quinovo.paths import CLINIC_PACK, HOMELAB_PACK, ROOT
-from quinovo.propose import extract_types
+from quinovo.paths import CLINIC_PACK, ROOT
 
 
 def test_example_implements_trackable():
@@ -16,28 +14,6 @@ def test_example_implements_trackable():
     assert any(p.api_name == "status" for p in pkg.properties)
 
 
-def test_homelab_pack_loads_without_live_tailscale(tmp_path):
-    kernel = open_kernel(HOMELAB_PACK, tmp_path / "lab.sqlite")
-    heater = kernel.get_object("Device", "nheater")
-    assert heater["properties"]["hostname"] == "heater"
-    assert kernel.search_around("Device", "nheater", "services")["objects"][0]["id"] == "qwen35-server"
-    applied = kernel.apply_action(
-        "acknowledge_alert",
-        {"alert": {"id": "alert-heater-expose"}},
-        "local",
-    )
-    assert applied["objects"][0]["properties"]["status"] == "acked"
-
-
-def test_homelab_fixture_connector(tmp_path):
-    kernel = open_kernel(HOMELAB_PACK, tmp_path / "lab.sqlite")
-    count = ingest_tailscale_fixture(
-        kernel.store, HOMELAB_PACK / "fixtures" / "tailscale-status.json"
-    )
-    assert count >= 2
-    assert kernel.get_object("Device", "nheater")["properties"]["class"] == "lab"
-
-
 def test_clinic_pack_honesty_check(tmp_path):
     kernel = open_kernel(CLINIC_PACK, tmp_path / "clinic.sqlite")
     assert kernel.get_object("Patient", "p-1")["properties"]["name"] == "Ada"
@@ -45,7 +21,7 @@ def test_clinic_pack_honesty_check(tmp_path):
     assert discharged["objects"][0]["properties"]["status"] == "discharged"
 
 
-def test_init_copies_example_not_homelab(tmp_path):
+def test_init_copies_example_starter(tmp_path):
     dest = tmp_path / "shop"
     init_pack(dest, "example")
     text = (dest / "ontology.yaml").read_text()
@@ -75,7 +51,7 @@ def test_hermes_and_adk_share_mcp_tools():
     assert "channel='mcp'" in adk
 
 
-def test_engine_never_mentions_homelab_nodes():
+def test_engine_source_has_no_lab_hostnames():
     blob = ""
     for path in (ROOT / "src" / "quinovo").rglob("*.py"):
         blob += path.read_text(encoding="utf-8")

@@ -1,34 +1,50 @@
 # Quinovo
 
-Quinovo **is an MCP server**. The tools are a Palantir-style operational ontology: typed objects, named links, inference, and governed actions. HTTP `quinovo serve` is a debug surface.
+An **operational ontology**. Typed objects, named links, inference, and governed actions. Agents talk to it over MCP. They may only `apply_action`. They may not `PATCH` a row or run SQL.
 
-You bring the world as a **pack** (`ontology.yaml`, `inference.yaml`, `seed.yaml`, optional `security.yaml` and functions). Shop, hospital, factory, lab — the engine does not care. It never hard-codes your nouns. Load a different pack, get different types, links, and actions. Same binary.
+You bring the world as a **pack**. The engine does not know your nouns.
 
-This is **not** another GitHub knowledge graph. Objects and named links are storage. The product is **typed inference** on top: forecasts become facts, facts plus links become recommended actions, low-confidence conclusions wait for a human. Agents may only `apply_action`. They may not `PATCH` a row or run SQL.
+![Quinovo ontology](docs/hero.png)
 
-Cursor, Claude, and Hermes (via MCP) are brains. Quinovo is the world. Google ADK wraps the same tools.
+[![Demo: objects, links, inference, apply_action](docs/demo.gif)](docs/demo.mp4)
 
-Read [research/taught-with-a-package.md](research/taught-with-a-package.md) (one teaching pack, not the product), then [research/inference.md](research/inference.md), then [research/plan.md](research/plan.md).
+[Watch the demo (mp4)](docs/demo.mp4)
+
+## Four primitives
+
+If any one is missing, you built something else.
+
+| Primitive | Job | If missing, you built |
+|-----------|-----|------------------------|
+| **Data** | Objects, properties, named links, series | A wiki |
+| **Logic** | Rules, functions, forecasts, inference | Pretty CRUD |
+| **Action** | Named transactions — the only legal writes | A read-only graph |
+| **Security** | Type, row, and property, evaluated at call time | An agent with root |
+
+![Four primitives](docs/primitives.svg)
+
+![Data, logic, action, security](docs/four-primitives.png)
+
+## How a write happens
+
+Objects and named links are storage. The product is **typed inference** on top: forecasts become facts, facts plus links become recommended actions, low-confidence conclusions wait for a human.
+
+![From graph to apply_action](docs/flow.svg)
+
+![Inference on the twin](docs/inference.png)
+
+The teaching pack is a box, a buyer, and a shipper. Late forecast → `at_risk` → `notify_buyer`. Below 80% confidence the fact stays pending. `apply_action` is the only write, and it is audited.
 
 ## Run
 
 ```bash
 make test
-# Product — point --pack at any world:
 quinovo mcp --pack packs/example
-# Cursor MCP config: command `quinovo`, args `mcp --pack <your-pack> --db .data/quinovo.sqlite`
-
-# Copy a starter pack and rename the nouns:
 quinovo init ./my-world
 quinovo init --from clinic ./my-clinic
-
-# Debug HTTP (not the public shape):
-make dev
-# Object View: http://127.0.0.1:8791/view/{Type}/{id}
-# Schema:      http://127.0.0.1:8791/manager
 ```
 
-MCP tools (generated against the loaded pack): `list_object_types`, `get_object`, `search_around`, `filter_objects`, `list_inferred_facts`, `run_inference`, `list_actions`, `apply_action`, `get_series`, `explain_fact`.
+MCP tools are generated from the loaded pack: `list_object_types`, `get_object`, `search_around`, `filter_objects`, `list_inferred_facts`, `run_inference`, `list_actions`, `apply_action`, `get_series`, `explain_fact`.
 
 ## Packs
 
@@ -36,16 +52,9 @@ A pack is a domain. Quinovo is not.
 
 | Pack | Why it exists |
 |------|----------------|
-| `packs/example` | Teaching world (a box, a buyer, a shipper). Default for `quinovo init`. Copy it, rename the types. |
+| `packs/example` | Teaching world. Default for `quinovo init`. Copy it, rename the types. |
 | `packs/clinic` | Honesty check: a second domain in the same binary. |
-| `packs/homelab` | Personal dogfood. Not the brand. CI uses a checked-in fixture, never a live network. |
 
-Interfaces and shared properties let packs share shape (`status`, `Trackable`) without a god type. Pack Python functions sit next to YAML rules. TimesFM 2.5 is the named forecast plugin; 3.0 weights stay off this path.
+Read [docs/ontology.md](docs/ontology.md).
 
-## Not the product
-
-The teaching pack is how we explain inference. Your lab is how *you* dogfood. Neither is Quinovo. TimesFM and Graphify are optional plugins into forecast and schema-proposal layers.
-
-## Status
-
-Phases A–D: MCP tools generated from the **loaded pack**, Funnel overlay, HITL below 80%, more than one domain in CI, series + TimesFM 2.5 plugin, pack functions, OpenFGA-shaped security (type → row → property), unattended vs approval as a separate knob, generated Object View and schema manager, scenarios as an overlay, Postgres as a dialect helper — not a lakehouse.
+Apache-2.0.

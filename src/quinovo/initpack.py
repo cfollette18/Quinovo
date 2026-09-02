@@ -1,4 +1,4 @@
-"""Copy a starter pack. Strangers get example, not homelab."""
+"""Copy a starter pack. Default is the example teaching world."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ def init_pack(dest: Path, starter: str = "example") -> Path:
     source = STARTERS.get(starter)
     if source is None or not source.exists():
         raise FileNotFoundError(
-            f"unknown starter {starter!r}. Use example (or clinic). Homelab is dogfood, not a template."
+            f"unknown starter {starter!r}. Use example or clinic."
         )
     dest = dest.resolve()
     if dest.exists() and any(dest.iterdir()):

@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 640" role="img" aria-labelledby="title desc">
+  <title id="title">Objects, links, inference, action</title>
+  <desc id="desc">A package object linked to a person and a shipper. Inference marks it at risk and recommends notify_buyer. The write is apply_action.</desc>
+  <rect width="1200" height="640" fill="#0e0e0e"/>
+  <text x="60" y="56" fill="#eee" font-family="ui-sans-serif, system-ui, sans-serif" font-size="26" font-weight="600">From a typed graph to a governed write</text>
+  <text x="60" y="86" fill="#9a9a9a" font-family="ui-sans-serif, system-ui, sans-serif" font-size="15">Teaching pack: a box, a buyer, a shipper. The engine does not care about the nouns.</text>
+
+  <g>
+    <rect x="80" y="160" width="200" height="88" rx="8" fill="#161616" stroke="#d4a017" stroke-width="2"/>
+    <text x="180" y="196" text-anchor="middle" fill="#9a9a9a" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">Package</text>
+    <text x="180" y="222" text-anchor="middle" fill="#eee" font-family="ui-sans-serif, system-ui, sans-serif" font-size="18" font-weight="600">1Z999</text>
+
+    <rect x="500" y="120" width="200" height="88" rx="8" fill="#161616" stroke="#2a2a2a"/>
+    <text x="600" y="156" text-anchor="middle" fill="#9a9a9a" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">Person</text>
+    <text x="600" y="182" text-anchor="middle" fill="#eee" font-family="ui-sans-serif, system-ui, sans-serif" font-size="18" font-weight="600">Bob</text>
+
+    <rect x="500" y="280" width="200" height="88" rx="8" fill="#161616" stroke="#2a2a2a"/>
+    <text x="600" y="316" text-anchor="middle" fill="#9a9a9a" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">Company</text>
+    <text x="600" y="342" text-anchor="middle" fill="#eee" font-family="ui-sans-serif, system-ui, sans-serif" font-size="18" font-weight="600">Amazon</text>
+
+    <rect x="80" y="360" width="200" height="88" rx="8" fill="#161616" stroke="#2a2a2a"/>
+    <text x="180" y="396" text-anchor="middle" fill="#9a9a9a" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">Product</text>
+    <text x="180" y="422" text-anchor="middle" fill="#eee" font-family="ui-sans-serif, system-ui, sans-serif" font-size="18" font-weight="600">lipstick-1</text>
+
+    <line x1="280" y1="190" x2="500" y2="164" stroke="#d4a017" stroke-width="1.6"/>
+    <text x="360" y="150" fill="#d4a017" font-family="ui-monospace, monospace" font-size="11">destined_for</text>
+    <line x1="280" y1="220" x2="500" y2="324" stroke="#d4a017" stroke-width="1.6"/>
+    <text x="330" y="290" fill="#d4a017" font-family="ui-monospace, monospace" font-size="11">shipped_by</text>
+    <line x1="180" y1="248" x2="180" y2="360" stroke="#d4a017" stroke-width="1.6"/>
+    <text x="196" y="310" fill="#d4a017" font-family="ui-monospace, monospace" font-size="11">contains</text>
+  </g>
+
+  <g>
+    <rect x="800" y="150" width="340" height="340" fill="#161616" stroke="#2a2a2a"/>
+    <text x="828" y="188" fill="#9a9a9a" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">INFERENCE</text>
+    <text x="828" y="228" fill="#eee" font-family="ui-sans-serif, system-ui, sans-serif" font-size="16">late forecast ’ at_risk</text>
+    <text x="828" y="256" fill="#c9a227" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">confidence &lt; 0.8 ’ pending HITL</text>
+    <text x="828" y="300" fill="#9a9a9a" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">RECOMMENDED ACTION</text>
+    <text x="828" y="336" fill="#eee" font-family="ui-sans-serif, system-ui, sans-serif" font-size="16">notify_buyer ’ Bob</text>
+    <rect x="828" y="380" width="284" height="44" fill="#d4a017"/>
+    <text x="970" y="408" text-anchor="middle" fill="#0e0e0e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="15" font-weight="600">apply_action</text>
+    <text x="828" y="454" fill="#666" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">Audited. No SQL. No PATCH.</text>
+  </g>
+</svg>

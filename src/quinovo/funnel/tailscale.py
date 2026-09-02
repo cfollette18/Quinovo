@@ -1,4 +1,4 @@
-"""Pack connectors. Homelab Tailscale reads a fixture in CI, never the live tailnet."""
+"""Optional JSON device-status connector for packs that ingest a fixture file."""
 
 from __future__ import annotations
 
