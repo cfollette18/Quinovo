@@ -1,0 +1,35 @@
+# Quinovo user-level systemd service.
+#
+# Install (no root needed):
+#   mkdir -p ~/.config/systemd/user
+#   cp scripts/quinovo.service ~/.config/systemd/user/quinovo.service
+#   # edit the paths below to point at your checkout
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now quinovo
+#
+# To keep the loop running after you log out (survives reboots once enabled):
+#   loginctl enable-linger "$USER"
+#
+# Logs: journalctl --user -u quinovo -f
+# QUINOVO_LOG_LEVEL (INFO by default) controls log verbosity.
+
+[Unit]
+Description=Quinovo operational ontology server (workspace + loop)
+After=network-online.target
+
+[Service]
+# Path to the Quinovo checkout on this machine.
+WorkingDirectory=%h/projects/Quinovo
+# Pack and database served by `quinovo serve` (see cli.py: --pack/--db/--host/--port).
+Environment=QUINOVO_PACK=%h/projects/Quinovo/packs/world
+Environment=QUINOVO_DB=%h/projects/Quinovo/.data/quinovo.sqlite
+Environment=QUINOVO_HOST=127.0.0.1
+Environment=QUINOVO_PORT=8791
+Environment=QUINOVO_LOG_LEVEL=INFO
+# The venv lives in the checkout (uv sync creates .venv).
+ExecStart=%h/projects/Quinovo/.venv/bin/quinovo serve --pack ${QUINOVO_PACK} --db ${QUINOVO_DB} --host ${QUINOVO_HOST} --port ${QUINOVO_PORT}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

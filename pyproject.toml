@@ -11,6 +11,8 @@ license = {text = "Apache-2.0"}
 requires-python = ">=3.12"
 dependencies = [
   "fastapi>=0.115",
+  "httpx>=0.27",
+  "langfuse>=3.0",
   "mcp>=1.8,<2",
   "pydantic>=2.9",
   "python-multipart>=0.0.9",
@@ -20,19 +22,75 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-  "httpx>=0.27",
+  "mypy>=1.11",
   "pytest>=8.3",
+  "ruff>=0.6",
 ]
+postgres = ["psycopg[binary]>=3.2"]
+forecast = ["timesfm"]
 
 [project.scripts]
 quinovo = "quinovo.cli:main"
 
 [tool.hatch.build.targets.wheel]
-only-include = ["quinovo"]
+packages = ["src/quinovo"]
 
-[tool.hatch.build.targets.wheel.sources]
-"src" = ""
+[tool.hatch.build.targets.wheel.force-include]
+"src/quinovo/apps/dashboard.html" = "quinovo/apps/dashboard.html"
+"src/quinovo/apps/chrome.css" = "quinovo/apps/chrome.css"
+"src/quinovo/apps/assets/logo.svg" = "quinovo/apps/assets/logo.svg"
+"src/quinovo/apps/assets/logo-mark.svg" = "quinovo/apps/assets/logo-mark.svg"
+"src/quinovo/apps/assets/logo-dark.svg" = "quinovo/apps/assets/logo-dark.svg"
+"src/quinovo/apps/assets/logo-full.svg" = "quinovo/apps/assets/logo-full.svg"
+"src/quinovo/apps/assets/favicon.svg" = "quinovo/apps/assets/favicon.svg"
+"src/quinovo/apps/assets/favicon-32.png" = "quinovo/apps/assets/favicon-32.png"
+"src/quinovo/apps/assets/logo.png" = "quinovo/apps/assets/logo.png"
+"src/quinovo/apps/assets/apple-touch-icon.png" = "quinovo/apps/assets/apple-touch-icon.png"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+# Phase 6 enables pydocstyle (D) rules scoped to src/quinovo:
+# extend-select = ["D"]
+# [tool.ruff.lint.pydocstyle]
+# convention = "google"
+# Temporarily ignored pending the lint cleanup pass — 32 violations remained
+# after the Phase 10 auto-fix sweep (counts below); un-ignore rule by rule.
+ignore = [
+  "ISC004",  # implicit string concat in collections (13)
+  "BLE001",  # blind except, intentional in loop guards (4)
+  "TRY004",  # ValueError vs TypeError (4)
+  "B017",    # pytest.raises(Exception) in tests (2)
+  "SIM102",  # collapsible if (1)
+  "SIM103",  # needless bool (1)
+  "SIM118",  # key in dict.keys() (1)
+  "FURB162", # fromisoformat replace Z (1)
+  "PIE810",  # multiple startswith (1)
+  "RUF046",  # cast of int to int (1)
+  "F401",    # re-export without __all__ (1)
+  "RUF100",  # noqa comments kept for when the ignored rules are re-enabled
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Pack function fixtures reference globals injected at runtime (args, search_around).
+"tests/fixtures/**" = ["F821"]
+# Hermes plugin dir has a dashed, non-importable module name by design.
+"integrations/**" = ["N999"]
+
+[tool.mypy]
+python_version = "3.12"
+mypy_path = "src"
+# Gradual mode: ignore errors everywhere except the strict modules below.
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = ["quinovo.engine.*", "quinovo.language.*"]
+ignore_errors = false
+strict = true
