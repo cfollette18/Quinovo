@@ -12,7 +12,6 @@ def test_sources_page_renders(client: TestClient):
     assert "Data coming in" in page.text
     assert "Actions going out" in page.text
     assert "MCP" in page.text
-    assert "YouTube" in page.text
     assert "kind-card" in page.text
     assert "Web address" in page.text
     assert "Slack" in page.text

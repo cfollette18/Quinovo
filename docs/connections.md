@@ -14,7 +14,6 @@ database under `.data/`, not in the pack.
 
 | Kind | What it does |
 |------|----------------|
-| YouTube (`youtube`) | Paste a video address. Quinovo reads the captions (not the file), extracts the useful claims, and files them as a conversation plus facts, memories, decisions, to-dos, and open questions under a topic your agent can search. |
 | Web address (`http`) | GET a JSON list (or a common wrapper) and upsert each row. |
 | JSON feed (`json`) | Same idea, tuned for a public array. |
 | Spreadsheet (`csv`) | Read a CSV file on this machine. |

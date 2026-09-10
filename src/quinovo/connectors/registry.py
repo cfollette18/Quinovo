@@ -24,7 +24,6 @@ from quinovo.connectors.sql_source import SqlSource
 from quinovo.connectors.synthetic import SyntheticSource
 from quinovo.connectors.transcripts import TranscriptsSource
 from quinovo.connectors.webhook_source import WebhookSource
-from quinovo.connectors.youtube import YoutubeSource
 from quinovo.engine.store import ObjectStore
 
 _BUILTIN: dict[str, Connector] = {
@@ -36,7 +35,6 @@ _BUILTIN: dict[str, Connector] = {
     "sql": SqlSource(),
     "mcp": McpSource(),
     "transcripts": TranscriptsSource(),
-    "youtube": YoutubeSource(),
 }
 
 CallableConnector = Callable[[ObjectStore, SourceRecord], SourceRun]

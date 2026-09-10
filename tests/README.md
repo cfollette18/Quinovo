@@ -39,4 +39,3 @@ pass over the example pack.
 | `test_train.py` | `train/` filters, datasets, jobs and the `/train` routes |
 | `test_universal_connectors.py` | `connectors/` http/json/csv/sql/mcp kinds incl. `engine/sql.py` DSN handling |
 | `test_world_capture.py` | `capture.py` and the `connectors/transcripts.py` ingest path on the world pack |
-| `test_youtube.py` | `connectors/youtube.py` caption ingest |

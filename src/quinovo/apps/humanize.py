@@ -328,7 +328,6 @@ def connection_kind_label(kind: str) -> str:
         "webhook": "Incoming push",
         "sql": "Database",
         "mcp": "MCP",
-        "youtube": "YouTube",
         "transcripts": "Agent transcripts",
         "synthetic": "Demo data",
         "callable": "Custom",

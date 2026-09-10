@@ -43,12 +43,9 @@ def create_mcp(kernel: Kernel) -> FastMCP:
             "Never skip the end-of-turn capture. Missing topics are created. "
             "Cretex work files under topic 'cretex' with subtopics 'technology' and "
             "'workflows' (use topic='cretex/workflows' or parent='cretex'). "
-            "tick pulls data sources (including agent transcripts and YouTube "
-            "captions), runs external logic, "
+            "tick pulls data sources (including agent transcripts), runs external logic, "
             "synthesizes pack and inference-rule proposals from the live index, infers, "
             "and applies unattended recommended actions. "
-            "To file a YouTube video as agent context, register_source with kind "
-            "youtube, object_type Conversation, config url plus topic, then pull_source. "
             "Humans never write packs or rules. Propose them with a confidence score. "
             f"Below {threshold} parks for HITL; {threshold} and above auto-applies. "
             "The only human job is approve_proposal, reject_proposal, "
@@ -334,7 +331,7 @@ def _register_tools(mcp: FastMCP, kernel: Kernel, side_hint: str) -> None:
     def list_sources() -> dict[str, Any]:
         return kernel.list_sources()
 
-    @mcp.tool(description="Register a data source (kind: http|json|csv|webhook|sql|mcp|synthetic|transcripts|youtube). Data flows in through MCP-style connectors.")
+    @mcp.tool(description="Register a data source (kind: http|json|csv|webhook|sql|mcp|synthetic|transcripts). Data flows in through MCP-style connectors.")
     def register_source(
         name: str,
         kind: str,

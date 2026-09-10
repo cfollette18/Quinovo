@@ -52,7 +52,6 @@ def _title(slug: str) -> str:
         "documentation-automation": "Documentation automation",
         "mcp-servers": "MCP servers",
         "technology": "Technology",
-        "youtube": "YouTube",
     }
     if slug in known:
         return known[slug]

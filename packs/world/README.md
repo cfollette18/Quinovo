@@ -58,10 +58,7 @@ semantic connections a human would see — who did what to whom, what
 contains what, what each thing is, what that implies — as linked Facts,
 Memories, and Persons, so knowledge grows even when the agent never calls
 `tick` itself. Tick also pulls the `transcripts` source so Cursor jsonl
-chats land in the world even when an agent forgets capture entirely. A YouTube
-source (`kind: youtube`) reads captions from a video address and files
-the same typed claims — facts, memories, decisions, to-dos, questions —
-under a topic, so a talk becomes search context instead of a blob.
+chats land in the world even when an agent forgets capture entirely.
 
 ## Why this pack exists
 

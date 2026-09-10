@@ -55,12 +55,6 @@ _ICON = {
         '<circle cx="18" cy="12" r="2.4" fill="currentColor"/>'
         '<path d="M8.4 12h7.2" stroke="currentColor" stroke-width="1.8"/></svg>'
     ),
-    "youtube": (
-        '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">'
-        '<rect x="3.5" y="6" width="17" height="12" fill="none" stroke="currentColor" '
-        'stroke-width="1.8" stroke-linejoin="miter"/>'
-        '<path d="M10 9.2v5.6L16 12z" fill="currentColor"/></svg>'
-    ),
     "email": (
         '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">'
         '<rect x="3.5" y="6" width="17" height="12" fill="none" stroke="currentColor" stroke-width="1.8"/>'
@@ -79,13 +73,6 @@ _ICON = {
 
 
 DATA_KINDS: tuple[ConnectionKind, ...] = (
-    ConnectionKind(
-        "youtube",
-        "data",
-        "YouTube",
-        "Paste a video address. Quinovo reads the captions and files the useful claims.",
-        _ICON["youtube"],
-    ),
     ConnectionKind("http", "data", "Web address", "Pull a list of things from any site that speaks HTTP.", _ICON["http"]),
     ConnectionKind("json", "data", "JSON feed", "Poll a public list and turn each item into an object.", _ICON["json"]),
     ConnectionKind("csv", "data", "Spreadsheet", "Read a CSV file on this machine.", _ICON["csv"]),
@@ -151,20 +138,14 @@ def config_from_data_form(kind: str, fields: dict[str, str]) -> dict[str, Any]:
             config["tool"] = (fields.get("tool") or "").strip()
             if token:
                 config["headers"] = {"Authorization": f"Bearer {token}"}
-        case "youtube":
-            config["url"] = (fields.get("url") or "").strip()
-            topic = (fields.get("topic") or "").strip()
-            if topic:
-                config["topic"] = topic
         case "synthetic":
             config["rows"] = []
         case _ as other:
             raise ValueError(f"unknown source kind {other!r}")
-    if kind != "youtube":
-        if mapping:
-            config["property_map"] = mapping
-        if id_field:
-            config["id_field"] = id_field
+    if mapping:
+        config["property_map"] = mapping
+    if id_field:
+        config["id_field"] = id_field
     return config
 
 

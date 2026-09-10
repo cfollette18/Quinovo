@@ -185,41 +185,8 @@ def _data_form(kind: str, object_types: list[str]) -> str:
       <label class="field"><span>Access token</span>
         <input name="token" type="password" autocomplete="off" placeholder="optional"/></label>
             """
-        case "youtube":
-            extra = """
-      <label class="field"><span>YouTube address</span>
-        <input name="url" required placeholder="https://www.youtube.com/watch?v=…"/></label>
-      <label class="field"><span>File under topic</span>
-        <input name="topic" placeholder="youtube — or a topic you already use, like quinovo"/></label>
-            """
         case _:
             extra = ""
-    if kind == "youtube":
-        if "Conversation" in object_types:
-            type_field = '<input type="hidden" name="object_type" value="Conversation"/>'
-        else:
-            type_field = (
-                '<label class="field"><span>These become</span>'
-                f'<select name="object_type" required>{_options(object_types)}</select></label>'
-            )
-        return f"""
-    <form class="conn-form" method="post" action="/sources/form">
-      <input type="hidden" name="kind" value="{esc(kind)}"/>
-      <p class="story">Paste a YouTube address. Quinovo reads the captions — not the video file — and files the useful claims as a conversation, facts, memories, decisions, to-dos, and open questions your agent can search.</p>
-      <label class="field"><span>Name</span>
-        <input name="name" required placeholder="talk on ontology"/></label>
-      {type_field}
-      {extra}
-      <label class="check">
-        <input type="checkbox" name="auto" value="on"/>
-        <span>Pull this on every loop</span>
-      </label>
-      <div class="form-actions">
-        <button type="submit" class="btn btn-primary">Save connection</button>
-        <a class="btn btn-ghost" href="/sources">Cancel</a>
-      </div>
-    </form>
-    """
     return f"""
     <form class="conn-form" method="post" action="/sources/form">
       <input type="hidden" name="kind" value="{esc(kind)}"/>

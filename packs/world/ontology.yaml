@@ -1198,19 +1198,3 @@ action_types:
   - parameter: topic
     set:
       status: archived
-- api_name: ingest_youtube_as_context
-  description: 'Pull a YouTube URL into Quinovo: fetch captions via InnerTube, MERGE
-    a Source node, write one Conversation plus extracted Facts/Memories/Todos/OpenQuestions
-    under the chosen Topic, then return the new object ids.'
-  parameters:
-  - api_name: url
-    type: string
-    object_type: null
-  - api_name: topic_id
-    type: string
-    object_type: null
-  edits: []
-  creates: []
-  mcp_requires_recommendation: false
-  unattended: false
-  approval_required: false
