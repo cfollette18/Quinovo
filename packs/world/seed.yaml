@@ -1,0 +1,95 @@
+# world seed
+#
+# On first boot, this creates the Topics we already know we care about
+# plus the one Person object (the user) so every other object has a place
+# to hang from. Subsequent boots are idempotent: upsert_object replaces
+# by primary key, so re-running load_seed leaves existing data alone.
+
+objects:
+  Topic:
+    - id: quinovo
+      name: Quinovo
+      description: "The operational ontology runtime and the world model built on top of it."
+      status: active
+    - id: cretex
+      name: Cretex
+      description: "New employer (effective ~Aug 2026+). Stack: Ivanti ticketing, Epicor ERP, Jira."
+      status: active
+    - id: technology
+      name: Technology
+      description: "Cretex systems and platforms: Ivanti, Epicor, Jira, and related tooling."
+      status: active
+    - id: workflows
+      name: Workflows
+      description: "Planned Cretex IT automations: ticket routing, user termination, docs, FAQ bot."
+      status: active
+    - id: ivanti
+      name: Ivanti
+      description: "Cretex ITSM / ticketing. No public developer portal; access via Cretex test env."
+      status: active
+    - id: epicor
+      name: Epicor
+      description: "Cretex ERP. Read-only except user-termination in a test environment."
+      status: active
+    - id: jira
+      name: Jira
+      description: "Work tracking. Self-serve; used as the T1 destination from Ivanti."
+      status: active
+    - id: ticket-automation
+      name: Ticket automation
+      description: "Ivanti → Jira T1 routing, T2 Epicor enrichment, closure back to Ivanti."
+      status: active
+    - id: epicor-user-termination
+      name: Epicor user termination
+      description: "One-command offboard from Epicor: dry-run, HITL, deactivate-never-delete."
+      status: active
+    - id: documentation-automation
+      name: Documentation automation
+      description: "Regenerate system docs from live systems; draft how-tos from resolved tickets."
+      status: active
+    - id: faq-bot
+      name: FAQ bot
+      description: "Plain-English Q&A over approved tickets and documents, fully local."
+      status: active
+    - id: mcp-servers
+      name: MCP servers
+      description: "Connectors and MCP servers built for Cretex systems and workflows."
+      status: active
+    - id: jig
+      name: jig
+      description: "Reproducible local LLM training app. QLoRA on Jetson Orin Nano."
+      status: active
+    - id: orzo
+      name: orzo
+      description: "1.5B agent-harness generator model. Jetson Orin Nano target."
+      status: active
+  Person:
+    - id: cfollette18
+      name: cfollette18
+    - id: hermes
+      name: Hermes (the agent)
+    - id: cursor
+      name: Cursor (the agent)
+
+links:
+  subtopic_of:
+    - from_id: technology
+      to_id: cretex
+    - from_id: workflows
+      to_id: cretex
+    - from_id: mcp-servers
+      to_id: cretex
+    - from_id: ivanti
+      to_id: technology
+    - from_id: epicor
+      to_id: technology
+    - from_id: jira
+      to_id: technology
+    - from_id: ticket-automation
+      to_id: workflows
+    - from_id: epicor-user-termination
+      to_id: workflows
+    - from_id: documentation-automation
+      to_id: workflows
+    - from_id: faq-bot
+      to_id: workflows

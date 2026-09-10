@@ -1,0 +1,1216 @@
+ontology:
+  api_name: world
+  display_name: Conversational world
+  description: 'A typed model of the agent''s working memory. Topics anchor everything;
+    Conversations, Facts, Memories, Todos, Skills, Decisions, and OpenQuestions hang
+    off Topics through in_topic links. Designed for autonomous capture: the agent
+    writes structured objects at the end of every turn, the typed inference layer
+    promotes them, and unattended actions trigger downstream side effects (auto-link
+    to a Person, mark a Todo as captured, notify when a decision is recorded).
+
+    '
+shared_properties:
+- api_name: confidence
+  type: number
+  description: "0.0\u20131.0. Captures the agent's or the rule's confidence in the\
+    \ fact. Facts at < 0.80 stay pending in Quinovo and require human approval (HITL).\
+    \ Facts at >= 0.90 auto-assert and may trigger unattended actions.\n"
+- api_name: recorded_at
+  type: string
+  description: ISO 8601 UTC timestamp for when the object was created.
+interfaces:
+- api_name: BelongsToTopic
+  description: Anything that hangs off a Topic through an in_topic link.
+  properties: []
+- api_name: TimeStamped
+  description: Anything that carries a recorded_at timestamp.
+  properties:
+  - recorded_at
+object_types:
+- api_name: Topic
+  primary_key: id
+  title_property: name
+  description: "A basket of similar objects the agent groups together. Examples: quinovo,\
+    \ cretex, jig, orzo. Subtopics nest inside (fruit \u2192 tropical fruit, or cretex\
+    \ \u2192 MCP servers). Everything else hangs off a Topic through in_topic.\n"
+  properties:
+  - api_name: id
+    type: string
+    description: slug, lowercase, no spaces (e.g. cretex, quinovo)
+  - api_name: name
+    type: string
+    description: human-readable label
+  - api_name: description
+    type: string
+    required: false
+  - api_name: status
+    type: string
+    required: false
+    description: active, dormant, or archived
+- api_name: Conversation
+  primary_key: id
+  title_property: summary
+  implements:
+  - BelongsToTopic
+  - TimeStamped
+  description: A single agent turn or a coherent exchange.
+  properties:
+  - api_name: id
+    type: string
+    description: session_id:turn_index, globally unique per turn
+  - api_name: session_id
+    type: string
+  - api_name: turn_index
+    type: number
+  - api_name: summary
+    type: string
+    description: one-paragraph digest of the turn
+  - api_name: recorded_at
+    type: string
+    description: ISO 8601 UTC timestamp
+  - api_name: role
+    type: string
+    required: false
+    description: free-form tag (planning, design, debug, ship, etc.)
+- api_name: Fact
+  primary_key: id
+  title_property: predicate
+  implements:
+  - BelongsToTopic
+  - TimeStamped
+  description: A single structured claim. The most atomic unit of knowledge.
+  properties:
+  - api_name: id
+    type: string
+  - api_name: predicate
+    type: string
+    description: short verb-like label (e.g. uses, decided, blocked_on)
+  - api_name: value
+    type: string
+    description: the object of the claim, free-form string
+  - api_name: confidence
+    type: number
+  - api_name: recorded_at
+    type: string
+- api_name: Memory
+  primary_key: id
+  title_property: text
+  implements:
+  - BelongsToTopic
+  - TimeStamped
+  description: A durable, cross-session fact about the user, environment, or agent.
+  properties:
+  - api_name: id
+    type: string
+  - api_name: text
+    type: string
+    description: the memory itself, written to be useful next session
+  - api_name: kind
+    type: string
+    description: user, environment, preference, or lesson
+  - api_name: confidence
+    type: number
+  - api_name: recorded_at
+    type: string
+- api_name: Todo
+  primary_key: id
+  title_property: text
+  implements:
+  - BelongsToTopic
+  - TimeStamped
+  description: A unit of work that came out of a Conversation and is not shipped yet.
+  properties:
+  - api_name: id
+    type: string
+  - api_name: text
+    type: string
+  - api_name: status
+    type: string
+  - api_name: priority
+    type: string
+    required: false
+  - api_name: recorded_at
+    type: string
+- api_name: Decision
+  primary_key: id
+  title_property: choice
+  implements:
+  - BelongsToTopic
+  - TimeStamped
+  description: A decision that was made, with the context it was made in and reasoning.
+  properties:
+  - api_name: id
+    type: string
+  - api_name: choice
+    type: string
+    description: what was decided
+  - api_name: context
+    type: string
+    description: what the situation was when the decision was made
+  - api_name: reasoning
+    type: string
+    required: false
+  - api_name: recorded_at
+    type: string
+- api_name: OpenQuestion
+  primary_key: id
+  title_property: text
+  implements:
+  - BelongsToTopic
+  - TimeStamped
+  description: An open question that was raised and not yet resolved.
+  properties:
+  - api_name: id
+    type: string
+  - api_name: text
+    type: string
+  - api_name: status
+    type: string
+  - api_name: recorded_at
+    type: string
+- api_name: Skill
+  primary_key: id
+  title_property: name
+  implements:
+  - BelongsToTopic
+  - TimeStamped
+  description: A reusable procedure the agent has captured as a skill.
+  properties:
+  - api_name: id
+    type: string
+    description: skill name (matches the on-disk SKILL.md)
+  - api_name: name
+    type: string
+  - api_name: description
+    type: string
+  - api_name: trigger
+    type: string
+    required: false
+    description: when to load this skill
+  - api_name: path
+    type: string
+    required: false
+    description: absolute path to the SKILL.md on disk
+  - api_name: recorded_at
+    type: string
+- api_name: Person
+  primary_key: id
+  title_property: name
+  description: A human referenced in the world.
+  properties:
+  - api_name: id
+    type: string
+    description: slug, e.g. cfollette18
+  - api_name: name
+    type: string
+- api_name: Project
+  primary_key: id
+  title_property: name
+  implements:
+  - BelongsToTopic
+  - TimeStamped
+  description: A named initiative inside a Topic.
+  properties:
+  - api_name: id
+    type: string
+  - api_name: name
+    type: string
+  - api_name: status
+    type: string
+    required: false
+  - api_name: recorded_at
+    type: string
+- api_name: ArchitecturalPrinciple
+  primary_key: id
+  title_property: name
+  description: A named architectural principle extracted from talks and mapped onto
+    Quinovo.
+  implements: []
+  properties:
+  - api_name: id
+    type: string
+    required: true
+    description: stable id, e.g. principle:P1
+  - api_name: name
+    type: string
+    required: true
+    description: human-readable principle name
+  - api_name: code
+    type: string
+    required: false
+    description: ''
+  - api_name: alias
+    type: string
+    required: false
+    description: ''
+  - api_name: rationale
+    type: string
+    required: false
+    description: ''
+  - api_name: trade_off
+    type: string
+    required: false
+    description: ''
+  - api_name: source_id
+    type: string
+    required: false
+    description: ''
+  - api_name: addressed_at_ts
+    type: integer
+    required: false
+    description: ''
+  - api_name: recorded_at
+    type: string
+    required: false
+    description: ''
+- api_name: Concern
+  primary_key: id
+  title_property: question
+  description: A stakeholder concern raised in a talk, which architectural principles
+    respond to.
+  implements: []
+  properties:
+  - api_name: id
+    type: string
+    required: true
+    description: ''
+  - api_name: question
+    type: string
+    required: true
+    description: the concern as a question
+  - api_name: framing
+    type: string
+    required: false
+    description: ''
+  - api_name: source_id
+    type: string
+    required: false
+    description: ''
+  - api_name: stakeholder
+    type: string
+    required: false
+    description: ''
+  - api_name: raised_at_ts
+    type: integer
+    required: false
+    description: ''
+  - api_name: recorded_at
+    type: string
+    required: false
+    description: ''
+- api_name: Risk
+  primary_key: id
+  title_property: name
+  description: A named risk that anti-patterns cause and principles mitigate.
+  implements: []
+  properties:
+  - api_name: id
+    type: string
+    required: true
+    description: ''
+  - api_name: name
+    type: string
+    required: true
+    description: ''
+  - api_name: code
+    type: string
+    required: false
+    description: ''
+  - api_name: description
+    type: string
+    required: false
+    description: ''
+  - api_name: mitigated_by_meta_principle
+    type: string
+    required: false
+    description: ''
+  - api_name: source_id
+    type: string
+    required: false
+    description: ''
+  - api_name: recorded_at
+    type: string
+    required: false
+    description: ''
+- api_name: Stakeholder
+  primary_key: id
+  title_property: name
+  description: A stakeholder role that raises concerns about agent architecture.
+  implements: []
+  properties:
+  - api_name: id
+    type: string
+    required: true
+    description: ''
+  - api_name: name
+    type: string
+    required: true
+    description: ''
+  - api_name: label
+    type: string
+    required: false
+    description: ''
+  - api_name: recorded_at
+    type: string
+    required: false
+    description: ''
+- api_name: MetaPrinciple
+  primary_key: id
+  title_property: name
+  description: A higher-order principle that architectural principles demonstrate
+    and anti-patterns violate.
+  implements: []
+  properties:
+  - api_name: id
+    type: string
+    required: true
+    description: ''
+  - api_name: name
+    type: string
+    required: true
+    description: ''
+  - api_name: statement
+    type: string
+    required: false
+    description: ''
+  - api_name: recorded_at
+    type: string
+    required: false
+    description: ''
+- api_name: AntiPattern
+  primary_key: id
+  title_property: name
+  description: An anti-pattern that causes risks and violates a meta-principle.
+  implements: []
+  properties:
+  - api_name: id
+    type: string
+    required: true
+    description: ''
+  - api_name: name
+    type: string
+    required: true
+    description: ''
+  - api_name: description
+    type: string
+    required: false
+    description: ''
+  - api_name: source_id
+    type: string
+    required: false
+    description: ''
+  - api_name: recorded_at
+    type: string
+    required: false
+    description: ''
+- api_name: Product
+  primary_key: id
+  title_property: name
+  description: A product (Quinovo and peers) that implements principles and has modules.
+  implements: []
+  properties:
+  - api_name: id
+    type: string
+    required: true
+    description: ''
+  - api_name: name
+    type: string
+    required: true
+    description: ''
+  - api_name: kind
+    type: string
+    required: false
+    description: ''
+  - api_name: description
+    type: string
+    required: false
+    description: ''
+  - api_name: recorded_at
+    type: string
+    required: false
+    description: ''
+- api_name: QuinovoModule
+  primary_key: id
+  title_property: name
+  description: A Quinovo source module that realizes architectural principles.
+  implements: []
+  properties:
+  - api_name: id
+    type: string
+    required: true
+    description: ''
+  - api_name: name
+    type: string
+    required: true
+    description: ''
+  - api_name: description
+    type: string
+    required: false
+    description: ''
+  - api_name: path
+    type: string
+    required: false
+    description: ''
+  - api_name: recorded_at
+    type: string
+    required: false
+    description: ''
+- api_name: QuinovoPrimitive
+  primary_key: id
+  title_property: name
+  description: A Quinovo runtime primitive that principles map onto.
+  implements: []
+  properties:
+  - api_name: id
+    type: string
+    required: true
+    description: ''
+  - api_name: name
+    type: string
+    required: true
+    description: ''
+  - api_name: slug
+    type: string
+    required: false
+    description: ''
+  - api_name: description
+    type: string
+    required: false
+    description: ''
+  - api_name: recorded_at
+    type: string
+    required: false
+    description: ''
+- api_name: TalkSource
+  primary_key: id
+  title_property: title
+  description: A talk or video that presented principles, concerns, and evidence.
+    Neo4j label Source.
+  implements: []
+  properties:
+  - api_name: id
+    type: string
+    required: true
+    description: ''
+  - api_name: title
+    type: string
+    required: true
+    description: ''
+  - api_name: url
+    type: string
+    required: false
+    description: ''
+  - api_name: video_id
+    type: string
+    required: false
+    description: ''
+  - api_name: thesis
+    type: string
+    required: false
+    description: ''
+  - api_name: source_file
+    type: string
+    required: false
+    description: ''
+  - api_name: duration_sec
+    type: integer
+    required: false
+    description: ''
+  - api_name: ingested_at
+    type: string
+    required: false
+    description: ''
+  - api_name: recorded_at
+    type: string
+    required: false
+    description: ''
+- api_name: Evidence
+  primary_key: id
+  title_property: quote
+  description: A quoted excerpt from a talk that supports an architectural principle.
+  implements: []
+  properties:
+  - api_name: id
+    type: string
+    required: true
+    description: ''
+  - api_name: quote
+    type: string
+    required: true
+    description: ''
+  - api_name: at_ts
+    type: integer
+    required: false
+    description: ''
+  - api_name: source_id
+    type: string
+    required: false
+    description: ''
+  - api_name: recorded_at
+    type: string
+    required: false
+    description: ''
+- api_name: Organization
+  primary_key: id
+  title_property: name
+  description: An organization that builds products and operates in industries.
+  implements: []
+  properties:
+  - api_name: id
+    type: string
+    required: true
+    description: ''
+  - api_name: name
+    type: string
+    required: true
+    description: ''
+  - api_name: kind
+    type: string
+    required: false
+    description: ''
+  - api_name: description
+    type: string
+    required: false
+    description: ''
+  - api_name: hq
+    type: string
+    required: false
+    description: ''
+  - api_name: recorded_at
+    type: string
+    required: false
+    description: ''
+- api_name: Speaker
+  primary_key: id
+  title_property: name
+  description: A speaker affiliated with an organization who appears in a talk.
+  implements: []
+  properties:
+  - api_name: id
+    type: string
+    required: true
+    description: ''
+  - api_name: name
+    type: string
+    required: true
+    description: ''
+  - api_name: role_at_time
+    type: string
+    required: false
+    description: ''
+  - api_name: recorded_at
+    type: string
+    required: false
+    description: ''
+- api_name: Integration
+  primary_key: id
+  title_property: name
+  description: A named integration or adjacent system mentioned in a talk.
+  implements: []
+  properties:
+  - api_name: id
+    type: string
+    required: true
+    description: ''
+  - api_name: name
+    type: string
+    required: true
+    description: ''
+  - api_name: recorded_at
+    type: string
+    required: false
+    description: ''
+- api_name: Industry
+  primary_key: id
+  title_property: name
+  description: An industry a talk discusses or an organization operates in.
+  implements: []
+  properties:
+  - api_name: id
+    type: string
+    required: true
+    description: ''
+  - api_name: name
+    type: string
+    required: true
+    description: ''
+  - api_name: recorded_at
+    type: string
+    required: false
+    description: ''
+- api_name: ComplianceFramework
+  primary_key: id
+  title_property: name
+  description: A compliance framework that principles and example architectures satisfy.
+  implements: []
+  properties:
+  - api_name: id
+    type: string
+    required: true
+    description: ''
+  - api_name: name
+    type: string
+    required: true
+    description: ''
+  - api_name: role
+    type: string
+    required: false
+    description: ''
+  - api_name: recorded_at
+    type: string
+    required: false
+    description: ''
+- api_name: AuditCriterion
+  primary_key: id
+  title_property: control
+  description: An audit control that belongs to a compliance framework and is satisfied
+    by principles.
+  implements: []
+  properties:
+  - api_name: id
+    type: string
+    required: true
+    description: ''
+  - api_name: control
+    type: string
+    required: true
+    description: ''
+  - api_name: description
+    type: string
+    required: false
+    description: ''
+  - api_name: framework
+    type: string
+    required: false
+    description: ''
+  - api_name: recorded_at
+    type: string
+    required: false
+    description: ''
+- api_name: StorageBackend
+  primary_key: id
+  title_property: name
+  description: A storage backend used by example architectures and implementing principles.
+  implements: []
+  properties:
+  - api_name: id
+    type: string
+    required: true
+    description: ''
+  - api_name: name
+    type: string
+    required: true
+    description: ''
+  - api_name: kind
+    type: string
+    required: false
+    description: ''
+  - api_name: summary
+    type: string
+    required: false
+    description: ''
+  - api_name: best_for
+    type: string
+    required: false
+    description: ''
+  - api_name: ops_complexity
+    type: string
+    required: false
+    description: ''
+  - api_name: scales_to
+    type: string
+    required: false
+    description: ''
+  - api_name: tamper_evidence
+    type: string
+    required: false
+    description: ''
+  - api_name: recorded_at
+    type: string
+    required: false
+    description: ''
+- api_name: ExampleArchitecture
+  primary_key: id
+  title_property: name
+  description: A worked example architecture that implements principles and uses a
+    storage backend.
+  implements: []
+  properties:
+  - api_name: id
+    type: string
+    required: true
+    description: ''
+  - api_name: name
+    type: string
+    required: true
+    description: ''
+  - api_name: summary
+    type: string
+    required: false
+    description: ''
+  - api_name: components
+    type: string
+    required: false
+    description: ''
+  - api_name: estimated_implementation_days
+    type: integer
+    required: false
+    description: ''
+  - api_name: recorded_at
+    type: string
+    required: false
+    description: ''
+link_types:
+- api_name: conversation_in_topic
+  from_type: Conversation
+  to_type: Topic
+  from_name: topic
+  to_name: contents
+  cardinality: many_to_one
+  description: A Conversation lives in a Topic.
+- api_name: fact_in_topic
+  from_type: Fact
+  to_type: Topic
+  from_name: topic
+  to_name: facts
+  cardinality: many_to_one
+  description: A Fact is asserted in a Topic.
+- api_name: memory_in_topic
+  from_type: Memory
+  to_type: Topic
+  from_name: topic
+  to_name: memories
+  cardinality: many_to_one
+  description: A Memory is filed under a Topic.
+- api_name: todo_in_topic
+  from_type: Todo
+  to_type: Topic
+  from_name: topic
+  to_name: todos
+  cardinality: many_to_one
+  description: A Todo is scoped to a Topic.
+- api_name: decision_in_topic
+  from_type: Decision
+  to_type: Topic
+  from_name: topic
+  to_name: decisions
+  cardinality: many_to_one
+  description: A Decision is made in a Topic.
+- api_name: question_in_topic
+  from_type: OpenQuestion
+  to_type: Topic
+  from_name: topic
+  to_name: open_questions
+  cardinality: many_to_one
+  description: An OpenQuestion is raised in a Topic.
+- api_name: skill_in_topic
+  from_type: Skill
+  to_type: Topic
+  from_name: topic
+  to_name: skills
+  cardinality: many_to_one
+  description: A Skill belongs to a Topic.
+- api_name: project_in_topic
+  from_type: Project
+  to_type: Topic
+  from_name: topic
+  to_name: projects
+  cardinality: many_to_one
+  description: A Project lives inside a Topic.
+- api_name: produced
+  from_type: Conversation
+  to_type: Fact
+  from_name: facts
+  to_name: conversation
+  cardinality: many_to_many
+  description: A turn produced a Fact.
+- api_name: decided
+  from_type: Conversation
+  to_type: Decision
+  from_name: decisions
+  to_name: conversation
+  cardinality: many_to_many
+  description: A turn landed a Decision.
+- api_name: raised
+  from_type: Conversation
+  to_type: OpenQuestion
+  from_name: open_questions
+  to_name: conversation
+  cardinality: many_to_many
+  description: A turn raised an OpenQuestion.
+- api_name: spawned
+  from_type: Conversation
+  to_type: Todo
+  from_name: todos
+  to_name: conversation
+  cardinality: many_to_many
+  description: A turn spawned a Todo.
+- api_name: recorded
+  from_type: Conversation
+  to_type: Memory
+  from_name: memories
+  to_name: conversation
+  cardinality: many_to_many
+  description: A turn recorded a Memory.
+- api_name: authored
+  from_type: Conversation
+  to_type: Skill
+  from_name: skills
+  to_name: conversation
+  cardinality: many_to_many
+  description: A turn authored a Skill.
+- api_name: fact_under_project
+  from_type: Fact
+  to_type: Project
+  from_name: project
+  to_name: facts
+  cardinality: many_to_one
+  description: A Fact is grouped under a Project.
+- api_name: todo_under_project
+  from_type: Todo
+  to_type: Project
+  from_name: project
+  to_name: todos
+  cardinality: many_to_one
+  description: A Todo is grouped under a Project.
+- api_name: decision_under_project
+  from_type: Decision
+  to_type: Project
+  from_name: project
+  to_name: decisions
+  cardinality: many_to_one
+  description: A Decision is grouped under a Project.
+- api_name: person_owns_memory
+  from_type: Person
+  to_type: Memory
+  from_name: memories
+  to_name: owner
+  cardinality: many_to_many
+  description: A Person owns a Memory.
+- api_name: person_owns_todo
+  from_type: Person
+  to_type: Todo
+  from_name: todos
+  to_name: owner
+  cardinality: many_to_many
+  description: A Person owns a Todo.
+- api_name: person_authored_decision
+  from_type: Person
+  to_type: Decision
+  from_name: decisions
+  to_name: author
+  cardinality: many_to_many
+  description: A Person authored a Decision.
+- api_name: subtopic_of
+  from_type: Topic
+  to_type: Topic
+  from_name: parent
+  to_name: subtopics
+  cardinality: many_to_one
+  description: Topic hierarchy (e.g. cretex -> ivanti).
+- api_name: principle_mitigates_risk
+  from_type: ArchitecturalPrinciple
+  to_type: Risk
+  from_name: mitigates
+  to_name: mitigated_by_principle
+  cardinality: many_to_many
+  description: A principle mitigates a named risk.
+- api_name: principle_responds_to_concern
+  from_type: ArchitecturalPrinciple
+  to_type: Concern
+  from_name: responds_to
+  to_name: addressed_by
+  cardinality: many_to_many
+  description: A principle responds to a stakeholder concern.
+- api_name: principle_demonstrates_meta
+  from_type: ArchitecturalPrinciple
+  to_type: MetaPrinciple
+  from_name: demonstrates
+  to_name: demonstrated_by
+  cardinality: many_to_many
+  description: A principle demonstrates a meta-principle.
+- api_name: principle_depends_on_principle
+  from_type: ArchitecturalPrinciple
+  to_type: ArchitecturalPrinciple
+  from_name: depends_on
+  to_name: depended_on_by
+  cardinality: many_to_many
+  description: A principle depends on another principle.
+- api_name: principle_enables_principle
+  from_type: ArchitecturalPrinciple
+  to_type: ArchitecturalPrinciple
+  from_name: enables
+  to_name: enabled_by
+  cardinality: many_to_many
+  description: A principle enables another principle.
+- api_name: principle_complements_principle
+  from_type: ArchitecturalPrinciple
+  to_type: ArchitecturalPrinciple
+  from_name: complements
+  to_name: complemented_by
+  cardinality: many_to_many
+  description: A principle complements another principle.
+- api_name: principle_maps_to_primitive
+  from_type: ArchitecturalPrinciple
+  to_type: QuinovoPrimitive
+  from_name: maps_to
+  to_name: mapped_from_principle
+  cardinality: many_to_many
+  description: A principle maps onto a Quinovo primitive.
+- api_name: principle_realized_by_module
+  from_type: ArchitecturalPrinciple
+  to_type: QuinovoModule
+  from_name: realized_by
+  to_name: realizes
+  cardinality: many_to_many
+  description: A principle is realized by a Quinovo module.
+- api_name: principle_enables_eval_for
+  from_type: ArchitecturalPrinciple
+  to_type: ArchitecturalPrinciple
+  from_name: enables_eval_for
+  to_name: eval_enabled_by
+  cardinality: many_to_many
+  description: A principle enables evaluation for another principle.
+- api_name: principle_satisfies_framework
+  from_type: ArchitecturalPrinciple
+  to_type: ComplianceFramework
+  from_name: satisfies
+  to_name: satisfied_by_principle
+  cardinality: many_to_many
+  description: A principle satisfies a compliance framework.
+- api_name: principle_satisfies_criterion
+  from_type: ArchitecturalPrinciple
+  to_type: AuditCriterion
+  from_name: satisfies_criterion
+  to_name: satisfied_by_principle_criterion
+  cardinality: many_to_many
+  description: A principle satisfies an audit criterion.
+- api_name: product_implements_principle
+  from_type: Product
+  to_type: ArchitecturalPrinciple
+  from_name: implements
+  to_name: implemented_by_product
+  cardinality: many_to_many
+  description: A product implements an architectural principle.
+- api_name: architecture_implements_principle
+  from_type: ExampleArchitecture
+  to_type: ArchitecturalPrinciple
+  from_name: implements
+  to_name: implemented_by_architecture
+  cardinality: many_to_many
+  description: An example architecture implements an architectural principle.
+- api_name: backend_implements_principle
+  from_type: StorageBackend
+  to_type: ArchitecturalPrinciple
+  from_name: implements
+  to_name: implemented_by_backend
+  cardinality: many_to_many
+  description: A storage backend implements an architectural principle.
+- api_name: talk_presents_principle
+  from_type: TalkSource
+  to_type: ArchitecturalPrinciple
+  from_name: presents
+  to_name: presented_in
+  cardinality: many_to_many
+  description: A talk presents an architectural principle.
+- api_name: evidence_supports_principle
+  from_type: Evidence
+  to_type: ArchitecturalPrinciple
+  from_name: supports
+  to_name: supported_by
+  cardinality: many_to_many
+  description: Quoted evidence supports an architectural principle.
+- api_name: antipattern_causes_risk
+  from_type: AntiPattern
+  to_type: Risk
+  from_name: causes
+  to_name: caused_by
+  cardinality: many_to_many
+  description: An anti-pattern causes a named risk.
+- api_name: antipattern_violates_meta
+  from_type: AntiPattern
+  to_type: MetaPrinciple
+  from_name: violates
+  to_name: violated_by
+  cardinality: many_to_many
+  description: An anti-pattern violates a meta-principle.
+- api_name: talk_raises_concern
+  from_type: TalkSource
+  to_type: Concern
+  from_name: raises
+  to_name: raised_in_talk
+  cardinality: many_to_many
+  description: A talk raises a stakeholder concern.
+- api_name: stakeholder_raises_concern
+  from_type: Stakeholder
+  to_type: Concern
+  from_name: raises
+  to_name: raised_by_stakeholder
+  cardinality: many_to_many
+  description: A stakeholder raises a concern.
+- api_name: talk_has_evidence
+  from_type: TalkSource
+  to_type: Evidence
+  from_name: has_evidence
+  to_name: evidence_of
+  cardinality: many_to_many
+  description: A talk contains quoted evidence.
+- api_name: talk_has_speaker
+  from_type: TalkSource
+  to_type: Speaker
+  from_name: has_speaker
+  to_name: spoke_in
+  cardinality: many_to_many
+  description: A talk features a speaker.
+- api_name: talk_discusses_industry
+  from_type: TalkSource
+  to_type: Industry
+  from_name: discusses
+  to_name: discussed_in
+  cardinality: many_to_many
+  description: A talk discusses an industry.
+- api_name: talk_mentions_integration
+  from_type: TalkSource
+  to_type: Integration
+  from_name: mentions_integration
+  to_name: mentioned_in_talk
+  cardinality: many_to_many
+  description: A talk mentions an integration.
+- api_name: talk_mentions_product
+  from_type: TalkSource
+  to_type: Product
+  from_name: mentions_product
+  to_name: mentioned_as_product
+  cardinality: many_to_many
+  description: A talk mentions a product.
+- api_name: talk_mapped_onto_product
+  from_type: TalkSource
+  to_type: Product
+  from_name: mapped_onto
+  to_name: mapped_from_talk
+  cardinality: many_to_one
+  description: A talk is mapped onto a product.
+- api_name: product_has_module
+  from_type: Product
+  to_type: QuinovoModule
+  from_name: has_module
+  to_name: module_of
+  cardinality: one_to_many
+  description: A product has a Quinovo module.
+- api_name: product_has_primitive
+  from_type: Product
+  to_type: QuinovoPrimitive
+  from_name: has_primitive
+  to_name: primitive_of
+  cardinality: one_to_many
+  description: A product has a Quinovo primitive.
+- api_name: organization_builds_product
+  from_type: Organization
+  to_type: Product
+  from_name: builds
+  to_name: built_by
+  cardinality: one_to_many
+  description: An organization builds a product.
+- api_name: organization_operates_in
+  from_type: Organization
+  to_type: Industry
+  from_name: operates_in
+  to_name: has_organization
+  cardinality: many_to_many
+  description: An organization operates in an industry.
+- api_name: speaker_affiliated_with
+  from_type: Speaker
+  to_type: Organization
+  from_name: affiliated_with
+  to_name: affiliates
+  cardinality: many_to_many
+  description: A speaker is affiliated with an organization.
+- api_name: criterion_belongs_to_framework
+  from_type: AuditCriterion
+  to_type: ComplianceFramework
+  from_name: belongs_to
+  to_name: criteria
+  cardinality: many_to_one
+  description: An audit criterion belongs to a compliance framework.
+- api_name: architecture_describes_product
+  from_type: ExampleArchitecture
+  to_type: Product
+  from_name: describes
+  to_name: described_by
+  cardinality: many_to_one
+  description: An example architecture describes a product.
+- api_name: architecture_satisfies_framework
+  from_type: ExampleArchitecture
+  to_type: ComplianceFramework
+  from_name: satisfies
+  to_name: satisfied_by_architecture
+  cardinality: many_to_many
+  description: An example architecture satisfies a compliance framework.
+- api_name: architecture_uses_backend
+  from_type: ExampleArchitecture
+  to_type: StorageBackend
+  from_name: uses_backend
+  to_name: used_by_architecture
+  cardinality: many_to_one
+  description: An example architecture uses a storage backend.
+action_types:
+- api_name: mark_todo_captured
+  description: Stamp a Todo with status=captured.
+  unattended: true
+  parameters:
+  - api_name: todo
+    type: object
+    object_type: Todo
+  edits:
+  - parameter: todo
+    set:
+      status: captured
+- api_name: mark_todo_shipped
+  description: Stamp a Todo as shipped.
+  unattended: true
+  parameters:
+  - api_name: todo
+    type: object
+    object_type: Todo
+  edits:
+  - parameter: todo
+    set:
+      status: shipped
+- api_name: mark_question_answered
+  description: Stamp an OpenQuestion as answered.
+  unattended: true
+  parameters:
+  - api_name: question
+    type: object
+    object_type: OpenQuestion
+  edits:
+  - parameter: question
+    set:
+      status: answered
+- api_name: archive_topic
+  description: Mark a Topic as archived. Gated; only fires on explicit apply_action.
+  unattended: false
+  parameters:
+  - api_name: topic
+    type: object
+    object_type: Topic
+  edits:
+  - parameter: topic
+    set:
+      status: archived
+- api_name: ingest_youtube_as_context
+  description: 'Pull a YouTube URL into Quinovo: fetch captions via InnerTube, MERGE
+    a Source node, write one Conversation plus extracted Facts/Memories/Todos/OpenQuestions
+    under the chosen Topic, then return the new object ids.'
+  parameters:
+  - api_name: url
+    type: string
+    object_type: null
+  - api_name: topic_id
+    type: string
+    object_type: null
+  edits: []
+  creates: []
+  mcp_requires_recommendation: false
+  unattended: false
+  approval_required: false

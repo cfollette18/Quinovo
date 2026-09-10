@@ -1,4 +1,0 @@
-functions:
-  - api_name: bobs_open_orders
-    source: functions/bobs_open_orders.py
-    description: Traverse Person bob → packages and return ids still in_transit.
