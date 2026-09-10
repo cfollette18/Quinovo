@@ -1,0 +1,43 @@
+model:
+  default: MiniMax-M3
+  provider: minimax
+  base_url: https://api.minimax.io/anthropic
+approvals:
+  mode: smart
+  timeout: 300
+  cron_mode: deny
+  single_query_mode: deny
+  mcp_reload_confirm: true
+  destructive_slash_confirm: true
+  deny:
+  - git push --force*
+  - '*sqlite3*quinovo*'
+  - '*sqlite3*world*'
+  - dd if=* of=/dev/*
+  - '* > .env*'
+  - '* >> .env*'
+  - rm -rf /
+  - rm -rf ~
+platform_toolsets:
+  cli:
+  - terminal
+  - file
+  - todo
+  - memory
+  - skills
+  - web
+  - search
+
+# The world. Same server block as ~/.hermes/mcp/servers/quinovo.md — point
+# --pack at another pack directory to change the world this profile serves.
+mcp_servers:
+  quinovo:
+    command: /home/cfollette18/projects/Quinovo/.venv/bin/quinovo
+    args:
+    - mcp
+    - --pack
+    - /home/cfollette18/projects/Quinovo/packs/world
+    - --db
+    - /home/cfollette18/projects/Quinovo/.data/world.sqlite
+    connect_timeout: 30
+    trust: full

@@ -1,0 +1,15 @@
+name: quinovo
+version: 0.1.0
+description: Operator of the Quinovo operational ontology — answers from the twin,
+  acts only through governed actions.
+hermes_requires: '>=0.12.0'
+author: Quinovo
+license: Apache-2.0
+distribution_owned:
+- SOUL.md
+- AGENTS.md
+- config.yaml
+- skills.lock
+- profile.yaml
+- distribution.yaml
+- skills

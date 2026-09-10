@@ -1,0 +1,14 @@
+---
+description: Quinovo is the ontology world for agents. MCP tools only.
+appliesTo: all-sessions
+---
+
+# Quinovo is the world
+
+When the `quinovo` MCP server is connected, treat it as the operational ontology.
+
+- Read typed objects and named links through Quinovo tools.
+- Change state only with `apply_action`.
+- Never SQL, PATCH, or edit the SQLite file.
+- Never call `tick` or `run_inference` to refresh the twin — the loop is event-driven and runs inference when new information arrives.
+- Low-confidence facts stay pending until a human approves. Surface the review queue; never approve unprompted.
