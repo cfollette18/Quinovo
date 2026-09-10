@@ -1,0 +1,5 @@
+<svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <title>HTTP</title>
+  <circle cx="12" cy="12" r="8.2" fill="none" stroke="#1b3139" stroke-width="1.7"/>
+  <path d="M4.2 12h15.6M12 3.8c2.6 2.8 2.6 13.6 0 16.4M12 3.8c-2.6 2.8-2.6 13.6 0 16.4" fill="none" stroke="#1b3139" stroke-width="1.5"/>
+</svg>

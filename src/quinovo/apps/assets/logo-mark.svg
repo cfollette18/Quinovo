@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Quinovo mark alone (no wordmark). Identical geometry to logo.svg. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Quinovo">
+  <title>Quinovo mark</title>
+  <path d="M32 14 L50 32 L32 50 L14 32 Z" fill="none" stroke="#1B3139" stroke-width="3.5" stroke-linejoin="miter"/>
+  <rect x="27" y="9"  width="10" height="10" fill="#FF3621"/>
+  <rect x="45" y="27" width="10" height="10" fill="#1B3139"/>
+  <rect x="27" y="45" width="10" height="10" fill="#1B3139"/>
+  <rect x="9"  y="27" width="10" height="10" fill="#1B3139"/>
+  <path d="M40 40 L56 56" fill="none" stroke="#1B3139" stroke-width="4" stroke-linecap="square"/>
+</svg>
