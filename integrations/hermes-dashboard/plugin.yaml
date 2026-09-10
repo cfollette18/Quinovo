@@ -1,0 +1,5 @@
+name: quinovo
+version: 0.1.0
+description: Operational ontology dashboard — query objects and view the typed graph fullscreen.
+author: Quinovo
+kind: standalone

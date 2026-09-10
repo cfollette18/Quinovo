@@ -1,0 +1,14 @@
+{
+  "name": "quinovo",
+  "label": "Quinovo",
+  "description": "Operational ontology: query objects, inspect facts, extend the graph fullscreen.",
+  "icon": "Database",
+  "version": "0.1.0",
+  "tab": {
+    "path": "/quinovo",
+    "position": "after:skills"
+  },
+  "entry": "dist/index.js",
+  "css": "dist/style.css",
+  "api": "plugin_api.py"
+}
