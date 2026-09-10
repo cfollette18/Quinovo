@@ -1,0 +1,27 @@
+---
+description: Databricks-style page layout for Quinovo marketing and app chrome. Palette unchanged.
+globs: src/quinovo/apps/**/*.{py,css,html}
+alwaysApply: false
+---
+
+# Layout
+
+Read `.cursor/skills/databricks-visual-language/layout.md`.
+
+- Content width **1280px**. Hero padding **96–120px**.
+- **Split hero**: copy left, large graphic right. Stack graphic below type under 1024px.
+- Alternate oat/white bands with **one** navy product band, then light again, then navy footer. No two dark bands in a row.
+- Product/why cards: graphic occupies the top of the card. Do not ship 3-up text-only tiles as the story.
+- How-it-works is a navy stage + architecture diagram, not `Data → Propose → Approve` as the layout.
+- One Lava CTA per viewport; pair with navy ghost. Sticky nav keeps the CTA when the menu collapses.
+
+```html
+<!-- ✅ -->
+<div class="hero-split">
+  <div class="hero-copy">…</div>
+  <figure class="hero-visual">{svg}</figure>
+</div>
+
+<!-- ❌ -->
+<section class="hero"><div class="hero-inner"><h1>…</h1></div></section>
+```

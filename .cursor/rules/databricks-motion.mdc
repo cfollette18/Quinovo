@@ -1,0 +1,23 @@
+---
+description: Databricks-style motion tokens and reduced-motion for Quinovo UI.
+globs: src/quinovo/apps/**/*.{py,css,html}
+alwaysApply: false
+---
+
+# Motion
+
+Read `.cursor/skills/databricks-visual-language/motion.md`.
+
+```css
+--ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+--ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+--motion-fast: 150ms;    /* hover color, focus */
+--motion-standard: 240ms; /* card lift, tab crossfade */
+--motion-slow: 320ms;     /* section reveal, mockup */
+```
+
+- One scroll reveal per section (24px fade-up, stagger children 80ms). Not every card independently.
+- Lava button hover = `brightness(1.08)`, not a color swap. Cards lift `translateY(-2px)`.
+- Diagrams: dashoffset flow and/or a token on `offset-path` (8–12s). Pause off-screen; provide a pause control for looping decoration.
+- No bounce, spring, `transition: all`, or pulsing CTAs.
+- `prefers-reduced-motion: reduce`: freeze diagrams at a complete rest pose; opacity-only ~100ms; no parallax or hover lift.

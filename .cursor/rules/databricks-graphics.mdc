@@ -1,0 +1,28 @@
+---
+description: Databricks-style diagrams and graphics for Quinovo. Highest priority visual rule. Colors stay Lava/Navy/Oat.
+globs: src/quinovo/apps/**/*.{py,css,html}
+alwaysApply: false
+---
+
+# Graphics and diagrams
+
+Read `.cursor/skills/databricks-visual-language/graphics.md` before adding or replacing UI visuals.
+
+Quinovo’s mark is the primitive: **square nodes**, diamond/orthogonal strokes, **one Lava square**, navy structure, oat stage. Inline SVG only.
+
+Must-haves on the landing page:
+
+1. Hero **right column** = large cycle, layer stack, or framed workspace mockup (not a CSS glow).
+2. How-it-works = **wide architecture SVG** with pipeline flow, not a text loop rail.
+3. Feature cards = **120px+ SVG headers**, not Lucide-in-a-box.
+
+```svg
+<!-- ✅ square station, square cap, lava focal -->
+<rect x="8" y="8" width="24" height="24" fill="#ff3621"/>
+<path d="M32 20 H80" stroke="#1b3139" stroke-width="2" stroke-linecap="square"/>
+
+<!-- ❌ explanation pretending to be a diagram -->
+<span class="loop-node">Data</span><span>→</span><span class="loop-node">Propose</span>
+```
+
+No undraw/humaaans, no purple AI glow, no hotlinked images. Extra hues (`--blue`, `--green`, …) only **inside** diagrams, never on nav or buttons.

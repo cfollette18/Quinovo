@@ -1,0 +1,55 @@
+---
+description: Never show raw JSON code blocks in the Quinovo frontend. Show human language instead.
+alwaysApply: true
+---
+
+# No JSON blocks in the Quinovo frontend
+
+The Quinovo frontend must **never** display raw JSON to users. Anywhere.
+Landing page, workspace chrome, graph inspector, object view, catalog,
+inference, audit, settings, train, connect, sources, SDK — all of it.
+
+## What "raw JSON" means
+
+Any of these, rendered into served HTML, is a violation:
+
+- `<details class="json-panel">` / `<pre>` JSON dumps
+- `<pre><code>{ ... }</code></pre>` config blocks
+- `JSON.stringify(obj, null, 2)` shown on the page
+- A `<pre>` block whose contents are JSON / YAML / a config object
+- A `json_panel(...)` / `jsonPanel(...)` call that emits visible JSON
+
+## What to do instead
+
+- Show **human language**. Use the helpers in `quinovo/apps/humanize.py`
+  (`title_case`, `fact_line`, `status_label`, `confidence_label`, …) to turn
+  kernel data into sentences.
+- For agent connection, show **agent logo cards**
+  (`quinovo/apps/agents.py`) — logo, name, one-line blurb, and plain-language
+  steps. The launch command is a **single line** in a styled `<input>`
+  (`.agent-cmd`), never a JSON block.
+- If a power user needs the raw config, the **Copy config** button fetches it
+  from `/connect/config/{agent}` (plain text) and puts it on the clipboard.
+  The raw config is **never rendered** on the page. Link to the API endpoint
+  (e.g. `/contract.json`) instead of dumping it inline.
+- `quinovo/apps/chrome.py::json_panel` is a **no-op** that returns `""`.
+  Do not call it. Do not reintroduce it. If you need a "view source"
+  affordance, link to the JSON API endpoint — do not render a `<pre>`.
+
+## Enforcement
+
+- Grep rendered pages before finishing: no `json-panel`, no `jsonPanel`,
+  no `<pre`, no `cfg-code`, no `cfg-toggle`/`cfg-grid` JSON dumps.
+- Tests in `tests/test_*.py` assert `"json-panel" not in page.text` and
+  `"<pre" not in page.text` for every served page. Keep them green and add
+  the same assertion to any new page test.
+- Human-language UI is codified in `skills/frontend-design/SKILL.md`.
+  Layout, graphics, and motion are in
+  `.cursor/skills/databricks-visual-language/SKILL.md`.
+  Read both before touching any file under `src/quinovo/apps/`.
+
+## Why
+
+Quinovo is human-first. The loop runs itself; humans only approve. Showing
+raw JSON to an approver is a bug, not a feature. Power users have the API
+and the copy button — the page itself stays clean.

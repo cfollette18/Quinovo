@@ -1,0 +1,10 @@
+---
+description: This repo is Quinovo. Agents use MCP tools, not the SQLite file.
+appliesTo: all-sessions
+---
+
+# Quinovo project
+
+This checkout is an operational ontology kernel. The product surface is `quinovo mcp`.
+
+Do not query `.data/quinovo.sqlite`. Do not add SQL or PATCH tools. Named actions are the only writes.

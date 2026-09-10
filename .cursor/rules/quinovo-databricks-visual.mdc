@@ -1,0 +1,18 @@
+---
+description: Quinovo UI matches Databricks layout, graphics, and motion. Lava/Navy/Oat palette is locked.
+alwaysApply: true
+---
+
+# Databricks match, Quinovo palette
+
+When editing the Quinovo website or workspace UI (`src/quinovo/apps/`, `landing.css`, `chrome.css`, templates, SVG), match [databricks.com](https://www.databricks.com/) on **layout, animation, and especially graphics/diagrams**.
+
+**Do not change the brand colors.** Keep Lava `#ff3621`, Navy `#1b3139`, Oat `#f9f7f4` (and the existing CSS vars). No new brand hues on chrome.
+
+Before any frontend change, read:
+
+`.cursor/skills/databricks-visual-language/SKILL.md`
+
+Then the companion files it links (layout, graphics, motion).
+
+Non-negotiable: a major marketing section needs a real SVG diagram or product visual, not a text rail or a gradient behind copy. Human-first copy and no raw JSON still apply.
