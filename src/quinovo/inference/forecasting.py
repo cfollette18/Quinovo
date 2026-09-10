@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Protocol
 
-from quinovo.engine.store import ObjectStore
 from quinovo.ai.runtime import write_forecast
+from quinovo.engine.store import ObjectStore
+
+logger = logging.getLogger(__name__)
 
 
 DEFAULT_MODEL = "timesfm-2.5"
@@ -37,8 +40,12 @@ class TimesFM25Backend:
         try:
             import timesfm  # type: ignore[import-not-found]
         except ImportError:
+            logger.warning(
+                "timesfm is not installed; falling back to the naive forecast backend"
+            )
             return NaiveBackend().predict(window, horizon_hours)
         _ = timesfm
+        logger.debug("timesfm weights path not implemented yet; using naive predictor")
         return NaiveBackend().predict(window, horizon_hours)
 
 
@@ -55,19 +62,19 @@ def load_backend(model: str) -> ForecastBackend:
 def forecast_metric(
     store: ObjectStore,
     object_type: str,
-    pk: str,
+    id: str,
     metric: str,
     horizon_hours: float,
     model: str = DEFAULT_MODEL,
     confidence: float = 0.85,
 ) -> object:
-    window = [value for _ts, value in store.series_window(object_type, pk, metric)]
+    window = [value for _ts, value in store.series_window(object_type, id, metric)]
     backend = load_backend(model)
     point, q10, q90 = backend.predict(window, horizon_hours)
     return write_forecast(
         store,
         object_type,
-        pk,
+        id,
         metric,
         horizon_hours,
         point,

@@ -1,0 +1,13 @@
+objects:
+  Bed:
+    - id: bed-1
+      status: occupied
+  Patient:
+    - id: p-1
+      name: Ada
+      status: admitted
+
+links:
+  occupies:
+    - from_id: p-1
+      to_id: bed-1

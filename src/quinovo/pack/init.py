@@ -1,20 +1,20 @@
-"""Copy a starter pack. Default is the example teaching world."""
+"""Copy a starter pack. Default is the world teaching pack."""
 
 from __future__ import annotations
 
 import shutil
 from pathlib import Path
 
-from quinovo.paths import EXAMPLE_PACK, ROOT
+from quinovo.workspace import DEFAULT_PACK
 
-STARTERS = {"example": EXAMPLE_PACK, "clinic": ROOT / "packs" / "clinic"}
+STARTERS = {"world": DEFAULT_PACK}
 
 
-def init_pack(dest: Path, starter: str = "example") -> Path:
+def init_pack(dest: Path, starter: str = "world") -> Path:
     source = STARTERS.get(starter)
     if source is None or not source.exists():
         raise FileNotFoundError(
-            f"unknown starter {starter!r}. Use example or clinic."
+            f"unknown starter {starter!r}. Use world."
         )
     dest = dest.resolve()
     if dest.exists() and any(dest.iterdir()):

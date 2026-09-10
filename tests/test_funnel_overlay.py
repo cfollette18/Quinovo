@@ -2,14 +2,15 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
+from conftest import EXAMPLE_PACK
 from quinovo.kernel import open_kernel
 
 
 def test_seed_reload_does_not_un_deliver(tmp_path):
-    kernel = open_kernel(db_path=tmp_path / "overlay.sqlite")
+    kernel = open_kernel(EXAMPLE_PACK, tmp_path / "overlay.sqlite")
     kernel.apply_action(
         "mark_delivered",
-        {"package": {"id": "1Z999"}},
+        {"package": {"type": "Package", "id": "1Z999"}},
         "warehouse",
         channel="human",
     )
@@ -22,7 +23,7 @@ def test_seed_reload_does_not_un_deliver(tmp_path):
 def test_human_notify_buyer_without_inference(client: TestClient):
     applied = client.post(
         "/actions/notify_buyer",
-        json={"parameters": {"package": {"id": "1Z999"}}, "actor": "warehouse"},
+        json={"parameters": {"package": {"type": "Package", "id": "1Z999"}}, "actor": "warehouse"},
     )
     assert applied.status_code == 200
     assert applied.json()["objects"][0]["properties"]["buyer_notified"] == "true"

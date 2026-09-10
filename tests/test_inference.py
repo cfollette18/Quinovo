@@ -21,7 +21,7 @@ def test_inference_is_not_just_stored_links(client: TestClient):
     assert "recommended_action" in predicates
 
     box = client.get("/objects/Package/1Z999").json()
-    inferred = {f["predicate"]: f for f in box["inferred"]}
+    inferred = {f["predicate"]: f for f in box["facts"]}
     assert inferred["at_risk"]["value"] == "true"
     assert inferred["at_risk"]["provenance"] == "predicted"
     assert inferred["at_risk"]["status"] == "asserted"
@@ -54,7 +54,7 @@ def test_low_confidence_forecast_parks_inference_for_hitl(client: TestClient):
     )
     assert approved.json()["fact"]["status"] == "asserted"
     box = client.get("/objects/Package/1Z999").json()
-    inferred = {f["predicate"]: f for f in box["inferred"]}
+    inferred = {f["predicate"]: f for f in box["facts"]}
     assert inferred["recommended_action"]["value"].startswith("notify_buyer:")
     assert inferred["recommended_action"]["status"] == "asserted"
 
@@ -76,6 +76,6 @@ def test_tracking_prefix_infers_amazon_without_seeded_link(client: TestClient):
     assert shipper[0]["id"] == "amazon"
 
     box = client.get("/objects/Package/1ZNEW").json()
-    link_facts = [f for f in box["inferred"] if f["predicate"] == "link:shipped_by"]
+    link_facts = [f for f in box["facts"] if f["predicate"] == "link:shipped_by"]
     assert link_facts[0]["value"] == "Company:amazon"
     assert link_facts[0]["status"] == "asserted"

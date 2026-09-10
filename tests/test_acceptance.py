@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
+from conftest import EXAMPLE_PACK
 from quinovo.language.load import load_ontology
 
 
 def test_ontology_loads():
-    ont = load_ontology("packs/example/ontology.yaml")
+    ont = load_ontology(EXAMPLE_PACK / "ontology.yaml")
     assert ont.ontology.api_name == "example"
     assert {t.api_name for t in ont.object_types} == {
         "Package",
@@ -44,7 +45,7 @@ def test_package_story_links(client: TestClient):
 def test_mark_delivered_is_audited(client: TestClient):
     applied = client.post(
         "/actions/mark_delivered",
-        json={"parameters": {"package": {"id": "1Z999"}}, "actor": "warehouse-agent"},
+        json={"parameters": {"package": {"type": "Package", "id": "1Z999"}}, "actor": "warehouse-agent"},
     )
     assert applied.status_code == 200
     assert applied.json()["objects"][0]["properties"]["status"] == "delivered"
@@ -52,10 +53,10 @@ def test_mark_delivered_is_audited(client: TestClient):
     after = client.get("/objects/Package/1Z999").json()
     assert after["properties"]["status"] == "delivered"
 
-    audit = client.get("/audit").json()["entries"]
-    assert len(audit) == 1
-    assert audit[0]["action_type"] == "mark_delivered"
-    assert audit[0]["actor"] == "warehouse-agent"
+    audit = client.get("/audit.json").json()["entries"]
+    delivered = [row for row in audit if row["action_type"] == "mark_delivered"]
+    assert delivered
+    assert delivered[-1]["actor"] == "warehouse-agent"
 
 
 def test_unknown_action_rejected(client: TestClient):

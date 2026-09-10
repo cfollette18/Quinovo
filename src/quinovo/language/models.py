@@ -2,17 +2,39 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, get_args
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from quinovo.policy import DEFAULT_AUTO_APPLY_MIN_CONFIDENCE
 
 PropertyType = Literal["string", "integer", "number", "boolean"]
 Cardinality = Literal["one_to_one", "one_to_many", "many_to_one", "many_to_many"]
 ActionParamKind = Literal["object", "string", "integer", "number", "boolean"]
 
+ProposalKind = Literal[
+    "type_definition",
+    "classification",
+    "inference_rule",
+    "link_type",
+    "action_type",
+    "action_application",
+    "pack",
+]
+PROPOSAL_KINDS: tuple[str, ...] = get_args(ProposalKind)
+
 
 class QuinovoModel(BaseModel):
+    """Shared base for every pack/config model: unknown keys are an error."""
+
     model_config = ConfigDict(extra="forbid")
+
+
+class ObjectRef(QuinovoModel):
+    """The one canonical object reference shape: {"type": "Package", "id": "box-1"}."""
+
+    type: str
+    id: str
 
 
 class PropertyDef(QuinovoModel):
@@ -56,14 +78,12 @@ class ObjectTypeDef(QuinovoModel):
 
 class LinkTypeDef(QuinovoModel):
     api_name: str
-    from_type: str = Field(alias="from")
-    to_type: str = Field(alias="to")
+    from_type: str
+    to_type: str
     from_name: str
     to_name: str
     cardinality: Cardinality
     description: str = ""
-
-    model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
 
 class ActionParameterDef(QuinovoModel):
@@ -105,14 +125,14 @@ class OntologyMeta(QuinovoModel):
     api_name: str
     display_name: str
     description: str = ""
-    auto_apply_min_confidence: float = 0.8
+    auto_apply_min_confidence: float = DEFAULT_AUTO_APPLY_MIN_CONFIDENCE
 
 
 class Ontology(QuinovoModel):
     ontology: OntologyMeta
     shared_properties: list[SharedPropertyDef] = Field(default_factory=list)
     interfaces: list[InterfaceDef] = Field(default_factory=list)
-    object_types: list[ObjectTypeDef]
+    object_types: list[ObjectTypeDef] = Field(default_factory=list)
     link_types: list[LinkTypeDef] = Field(default_factory=list)
     action_types: list[ActionTypeDef] = Field(default_factory=list)
 
@@ -178,11 +198,11 @@ class Ontology(QuinovoModel):
         for link in self.link_types:
             if link.from_type not in object_set:
                 raise ValueError(
-                    f"link {link.api_name}: from {link.from_type!r} is not an object type"
+                    f"link {link.api_name}: from_type {link.from_type!r} is not an object type"
                 )
             if link.to_type not in object_set:
                 raise ValueError(
-                    f"link {link.api_name}: to {link.to_type!r} is not an object type"
+                    f"link {link.api_name}: to_type {link.to_type!r} is not an object type"
                 )
 
         for action in self.action_types:

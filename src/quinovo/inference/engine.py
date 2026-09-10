@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from quinovo.engine.store import InferredFact, ObjectStore, StoredObject
 from quinovo.inference.rules import InferenceRule, InferenceRuleset
 from quinovo.policy import requires_hitl
@@ -75,10 +77,10 @@ def _forecast_fact(store: ObjectStore, rule: InferenceRule) -> list[InferredFact
         return []
     out: list[InferredFact] = []
     for obj in store.list_objects(rule.source_type):
-        forecast = store.latest_forecast(obj.object_type, obj.primary_key, when.metric)
+        forecast = store.latest_forecast(obj.object_type, obj.id, when.metric)
         if forecast is None or forecast.point < when.point_gte:
             continue
-        confidence = forecast.confidence if rule.confidence == "forecast" else float(rule.confidence)
+        confidence = forecast.confidence if rule.confidence_from == "forecast" else rule.resolved_confidence()
         fact = _commit_fact(
             store,
             obj,
@@ -94,6 +96,21 @@ def _forecast_fact(store: ObjectStore, rule: InferenceRule) -> list[InferredFact
     return out
 
 
+def _property_is_set(value: Any, equals: str) -> bool:
+    """Match a stored property against a rule.
+
+    An empty ``equals`` means "present and nonempty" — that is how the world
+    pack writes ``recorded_at: ""`` in inference.yaml. A nonempty equals is
+    a literal string match.
+    """
+    if value is None:
+        return False
+    text = str(value).strip()
+    if equals == "":
+        return text != ""
+    return text == equals
+
+
 def _fact_link_fact(store: ObjectStore, rule: InferenceRule) -> list[InferredFact]:
     when = rule.when_fact
     then = rule.then_fact
@@ -102,13 +119,14 @@ def _fact_link_fact(store: ObjectStore, rule: InferenceRule) -> list[InferredFac
         return []
     out: list[InferredFact] = []
     for obj in store.list_objects(rule.source_type):
-        if not _has_asserted_fact(store, obj, when.predicate, when.equals):
+        needs_fact = bool(when.predicate) or bool(when.equals)
+        if needs_fact and not _has_asserted_fact(store, obj, when.predicate, when.equals):
             continue
-        neighbors = store.search_around(obj.object_type, obj.primary_key, side)
+        neighbors = store.search_around(obj.object_type, obj.id, side)
         if not neighbors:
             continue
-        confidence = float(rule.confidence) if rule.confidence != "forecast" else 0.9
-        joined = ",".join(f"{n.object_type}:{n.primary_key}" for n in neighbors)
+        confidence = rule.resolved_confidence()
+        joined = ",".join(f"{n.object_type}:{n.id}" for n in neighbors)
         fact = _commit_fact(
             store,
             obj,
@@ -130,14 +148,14 @@ def _prefix_link(store: ObjectStore, rule: InferenceRule) -> list[InferredFact]:
     if prefix is None or then is None:
         return []
     out: list[InferredFact] = []
-    confidence = float(rule.confidence) if rule.confidence != "forecast" else 0.9
+    confidence = rule.resolved_confidence()
     for obj in store.list_objects(rule.source_type):
-        if not obj.primary_key.startswith(prefix):
+        if not obj.id.startswith(prefix):
             continue
         already = store.has_link(
             then.link_type,
             obj.object_type,
-            obj.primary_key,
+            obj.id,
             then.to_type,
             then.to_id,
         )
@@ -157,7 +175,7 @@ def _prefix_link(store: ObjectStore, rule: InferenceRule) -> list[InferredFact]:
             store.add_link(
                 then.link_type,
                 obj.object_type,
-                obj.primary_key,
+                obj.id,
                 then.to_type,
                 then.to_id,
             )
@@ -171,9 +189,9 @@ def _property_fact(store: ObjectStore, rule: InferenceRule) -> list[InferredFact
     if when is None or then is None:
         return []
     out: list[InferredFact] = []
-    confidence = float(rule.confidence) if rule.confidence != "forecast" else 0.9
+    confidence = rule.resolved_confidence()
     for obj in store.list_objects(rule.source_type):
-        if str(obj.properties.get(when.api_name)) != when.equals:
+        if not _property_is_set(obj.properties.get(when.api_name), when.equals):
             continue
         fact = _commit_fact(
             store,
@@ -195,17 +213,17 @@ def _join_links(store: ObjectStore, rule: InferenceRule) -> list[InferredFact]:
     if then is None:
         return []
     out: list[InferredFact] = []
-    confidence = float(rule.confidence) if rule.confidence != "forecast" else 0.9
+    confidence = rule.resolved_confidence()
     for obj in store.list_objects(rule.source_type):
         hops: list[str] = []
         missing = False
         for side in rule.when_links:
-            neighbors = store.search_around(obj.object_type, obj.primary_key, side)
+            neighbors = store.search_around(obj.object_type, obj.id, side)
             if not neighbors:
                 missing = True
                 break
             hops.append(
-                f"{side}=" + ",".join(f"{n.object_type}:{n.primary_key}" for n in neighbors)
+                f"{side}=" + ",".join(f"{n.object_type}:{n.id}" for n in neighbors)
             )
         if missing:
             continue
@@ -230,7 +248,7 @@ def _has_asserted_fact(
     predicate: str,
     value: str,
 ) -> bool:
-    for fact in store.list_inferred_facts(obj.object_type, obj.primary_key, status="asserted"):
+    for fact in store.list_inferred_facts(obj.object_type, obj.id, status="asserted"):
         if fact.predicate == predicate and fact.value == value:
             return True
     return False
@@ -250,7 +268,7 @@ def _commit_fact(
     status = "pending" if requires_hitl(confidence, threshold) else "asserted"
     previous = [
         f
-        for f in store.list_inferred_facts(obj.object_type, obj.primary_key)
+        for f in store.list_inferred_facts(obj.object_type, obj.id)
         if f.predicate == predicate and f.rule == rule
     ]
     if previous and previous[0].value == value and previous[0].status == status:
@@ -259,7 +277,7 @@ def _commit_fact(
         return None
     fact = store.upsert_inferred_fact(
         obj.object_type,
-        obj.primary_key,
+        obj.id,
         predicate,
         value,
         confidence,

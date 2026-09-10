@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-from quinovo.initpack import init_pack
+from conftest import CLINIC_PACK, EXAMPLE_PACK
 from quinovo.kernel import open_kernel
 from quinovo.language.load import load_ontology
-from quinovo.adapters import adk_function_tools, hermes_skill
-from quinovo.paths import CLINIC_PACK, ROOT
+from quinovo.mcp.contract import adk_function_tools, hermes_skill
+from quinovo.pack.init import init_pack
+from quinovo.workspace import ROOT
 
 
 def test_example_implements_trackable():
-    ont = load_ontology("packs/example/ontology.yaml")
+    ont = load_ontology(EXAMPLE_PACK / "ontology.yaml")
     pkg = ont.object_type("Package")
     assert "Trackable" in pkg.implements
     assert any(p.api_name == "status" for p in pkg.properties)
@@ -17,15 +18,15 @@ def test_example_implements_trackable():
 def test_clinic_pack_honesty_check(tmp_path):
     kernel = open_kernel(CLINIC_PACK, tmp_path / "clinic.sqlite")
     assert kernel.get_object("Patient", "p-1")["properties"]["name"] == "Ada"
-    discharged = kernel.apply_action("discharge", {"patient": {"id": "p-1"}}, "local")
+    discharged = kernel.apply_action("discharge", {"patient": {"type": "Patient", "id": "p-1"}}, "local")
     assert discharged["objects"][0]["properties"]["status"] == "discharged"
 
 
-def test_init_copies_example_starter(tmp_path):
+def test_init_copies_world_starter(tmp_path):
     dest = tmp_path / "shop"
-    init_pack(dest, "example")
+    init_pack(dest, "world")
     text = (dest / "ontology.yaml").read_text()
-    assert "Package" in text
+    assert "Topic" in text
     assert "heater" not in text
 
 

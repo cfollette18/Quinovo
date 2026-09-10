@@ -1,79 +1,213 @@
 from __future__ import annotations
 
-from typing import Any, Literal
+from pathlib import Path
+from typing import Any, Protocol
 
 from quinovo.engine.store import Forecast, ObjectStore, Proposal, StoredObject
-from quinovo.language.models import ObjectTypeDef
-from quinovo.policy import requires_hitl
-
-ProposalKind = Literal["type_definition", "classification"]
+from quinovo.language.models import PROPOSAL_KINDS, ProposalKind
+from quinovo.pack.authoring import PackCreateError, apply_kind
+from quinovo.policy import ActionChannel, requires_hitl
 
 
 class ProposalError(Exception):
     """AI proposal rejected or not found."""
 
 
-def submit_proposal(
-    store: ObjectStore,
+class ProposalKernel(Protocol):
+    pack_dir: Path
+    store: ObjectStore
+
+    def reload(self) -> None: ...
+
+    def apply_action(
+        self,
+        action_type: str,
+        parameters: dict[str, Any],
+        actor: str = "local",
+        *,
+        channel: ActionChannel = "human",
+        fact_id: int | None = None,
+        already_approved: bool = False,
+    ) -> dict[str, Any]: ...
+
+
+def _as_kind(kind: str) -> ProposalKind:
+    if kind in PROPOSAL_KINDS:
+        return kind  # type: ignore[return-value]
+    raise ProposalError(f"unknown proposal kind {kind!r}")
+
+
+def _execute(
+    kernel: ProposalKernel,
     kind: ProposalKind,
+    payload: dict[str, Any],
+) -> list[StoredObject]:
+    try:
+        edited, needs_reload = apply_kind(kernel.pack_dir, kernel.store, kind, payload)
+    except (PackCreateError, KeyError, TypeError, ValueError) as exc:
+        raise ProposalError(str(exc)) from exc
+    if needs_reload:
+        kernel.reload()
+    return edited
+
+
+def submit_proposal(
+    kernel: ProposalKernel,
+    kind: str,
     payload: dict[str, Any],
     confidence: float,
     actor: str = "quinovo-ai",
 ) -> tuple[Proposal, list[StoredObject]]:
-    """
-    New types and classifications: auto-apply at >= threshold (default 80%),
-    otherwise park for HITL.
-    """
-    threshold = store.ontology.ontology.auto_apply_min_confidence
+    """Pack and rule changes: auto-apply at >= threshold (default 80%), else park for HITL."""
+    resolved = _as_kind(kind)
+    if resolved == "action_application":
+        return _submit_action_application(kernel, payload, confidence, actor)
+    threshold = kernel.store.ontology.ontology.auto_apply_min_confidence
     try:
         hitl = requires_hitl(confidence, threshold)
     except ValueError as exc:
         raise ProposalError(str(exc)) from exc
 
-    if kind not in ("type_definition", "classification"):
-        raise ProposalError(f"unknown proposal kind {kind!r}")
-
     if hitl:
-        proposal = store.insert_proposal(kind, payload, confidence, actor, "pending")
-        store.append_audit(
+        proposal = kernel.store.insert_proposal(resolved, payload, confidence, actor, "pending")
+        kernel.store.append_audit(
             "ai_propose",
             actor,
-            {"kind": kind, "confidence": confidence, "proposal_id": proposal.id},
+            {"kind": resolved, "confidence": confidence, "proposal_id": proposal.id},
             "pending_hitl",
         )
         return proposal, []
 
-    edited = _execute(store, kind, payload)
-    proposal = store.insert_proposal(kind, payload, confidence, actor, "auto_applied")
-    store.append_audit(
+    edited = _execute(kernel, resolved, payload)
+    proposal = kernel.store.insert_proposal(resolved, payload, confidence, actor, "auto_applied")
+    kernel.store.append_audit(
         "ai_propose",
         actor,
-        {"kind": kind, "confidence": confidence, "proposal_id": proposal.id},
+        {"kind": resolved, "confidence": confidence, "proposal_id": proposal.id},
         "auto_applied",
     )
     return proposal, edited
 
 
+def _submit_action_application(
+    kernel: ProposalKernel,
+    payload: dict[str, Any],
+    confidence: float,
+    actor: str,
+) -> tuple[Proposal, list[StoredObject]]:
+    """The LLM reasons over the ontology and proposes applying a named action.
+
+    Below the threshold this parks as a HITL proposal; approving it applies the
+    action. At/above the threshold the action is applied immediately through the
+    same audited path an agent would use. approval_required actions still park.
+    """
+    action_type = payload.get("action_type")
+    parameters = payload.get("parameters") or {}
+    if not isinstance(action_type, str) or not action_type:
+        raise ProposalError("action_application payload needs action_type")
+    if not isinstance(parameters, dict):
+        raise ProposalError("action_application parameters must be a mapping")
+    threshold = kernel.store.ontology.ontology.auto_apply_min_confidence
+    try:
+        hitl = requires_hitl(confidence, threshold)
+    except ValueError as exc:
+        raise ProposalError(str(exc)) from exc
+    if hitl:
+        proposal = kernel.store.insert_proposal(
+            "action_application", payload, confidence, actor, "pending"
+        )
+        kernel.store.append_audit(
+            "ai_propose",
+            actor,
+            {"kind": "action_application", "action_type": action_type, "proposal_id": proposal.id},
+            "pending_hitl",
+        )
+        return proposal, []
+    # The action's own policy is sovereign: only actions the loop could auto-apply
+    # (unattended, or mcp_requires_recommendation) are auto-applied at >=0.8.
+    # approval_required and plain actions still park for a human.
+    try:
+        spec = kernel.store.ontology.action_type(action_type)
+    except KeyError as exc:
+        raise ProposalError(f"unknown action type {action_type!r}") from exc
+    auto_apply = spec.unattended or spec.mcp_requires_recommendation
+    if not auto_apply:
+        proposal = kernel.store.insert_proposal(
+            "action_application", payload, confidence, actor, "pending"
+        )
+        kernel.store.append_audit(
+            "ai_propose",
+            actor,
+            {"kind": "action_application", "action_type": action_type, "proposal_id": proposal.id},
+            "pending_hitl",
+        )
+        return proposal, []
+    try:
+        result = kernel.apply_action(action_type, parameters, actor, channel="mcp", already_approved=True)
+    except Exception:  # noqa: BLE001 — policy parked it (e.g. missing recommendation)
+        proposal = kernel.store.insert_proposal(
+            "action_application", payload, confidence, actor, "pending"
+        )
+        kernel.store.append_audit(
+            "ai_propose",
+            actor,
+            {"kind": "action_application", "action_type": action_type, "proposal_id": proposal.id},
+            "pending_hitl",
+        )
+        return proposal, []
+    proposal = kernel.store.insert_proposal(
+        "action_application", payload, confidence, actor, "auto_applied"
+    )
+    kernel.store.append_audit(
+        "ai_propose",
+        actor,
+        {"kind": "action_application", "action_type": action_type, "proposal_id": proposal.id},
+        "auto_applied",
+    )
+    edited = [
+        kernel.store.get_object(obj["type"], obj["id"])  # type: ignore[arg-type]
+        for obj in result.get("objects", [])
+    ]
+    edited = [item for item in edited if item is not None]
+    return proposal, edited
+
+
 def approve_proposal(
-    store: ObjectStore,
+    kernel: ProposalKernel,
     proposal_id: int,
     actor: str,
 ) -> tuple[Proposal, list[StoredObject]]:
-    proposal = store.get_proposal(proposal_id)
+    proposal = kernel.store.get_proposal(proposal_id)
     if proposal is None:
         raise ProposalError(f"missing proposal {proposal_id}")
     if proposal.status != "pending":
         raise ProposalError(f"proposal {proposal_id} is {proposal.status}, not pending")
-    kind: ProposalKind
-    if proposal.kind == "type_definition":
-        kind = "type_definition"
-    elif proposal.kind == "classification":
-        kind = "classification"
-    else:
-        raise ProposalError(f"unknown proposal kind {proposal.kind!r}")
-    edited = _execute(store, kind, proposal.payload)
-    updated = store.set_proposal_status(proposal_id, "approved", actor)
-    store.append_audit(
+    if proposal.kind == "action_application":
+        payload = proposal.payload
+        action_type = payload.get("action_type")
+        parameters = payload.get("parameters") or {}
+        if not isinstance(action_type, str) or not action_type:
+            raise ProposalError("action_application payload needs action_type")
+        result = kernel.apply_action(
+            action_type, parameters, actor, channel="human", already_approved=True
+        )
+        updated = kernel.store.set_proposal_status(proposal_id, "approved", actor)
+        kernel.store.append_audit(
+            "approve_proposal",
+            actor,
+            {"proposal_id": proposal_id, "action_type": action_type},
+            "applied",
+        )
+        edited = [
+            kernel.store.get_object(obj["type"], obj["id"])  # type: ignore[arg-type]
+            for obj in result.get("objects", [])
+        ]
+        edited = [item for item in edited if item is not None]
+        return updated, edited
+    kind = _as_kind(proposal.kind)
+    edited = _execute(kernel, kind, proposal.payload)
+    updated = kernel.store.set_proposal_status(proposal_id, "approved", actor)
+    kernel.store.append_audit(
         "approve_proposal",
         actor,
         {"proposal_id": proposal_id},
@@ -82,14 +216,14 @@ def approve_proposal(
     return updated, edited
 
 
-def reject_proposal(store: ObjectStore, proposal_id: int, actor: str) -> Proposal:
-    proposal = store.get_proposal(proposal_id)
+def reject_proposal(kernel: ProposalKernel, proposal_id: int, actor: str) -> Proposal:
+    proposal = kernel.store.get_proposal(proposal_id)
     if proposal is None:
         raise ProposalError(f"missing proposal {proposal_id}")
     if proposal.status != "pending":
         raise ProposalError(f"proposal {proposal_id} is {proposal.status}, not pending")
-    updated = store.set_proposal_status(proposal_id, "rejected", actor)
-    store.append_audit(
+    updated = kernel.store.set_proposal_status(proposal_id, "rejected", actor)
+    kernel.store.append_audit(
         "reject_proposal",
         actor,
         {"proposal_id": proposal_id},
@@ -101,7 +235,7 @@ def reject_proposal(store: ObjectStore, proposal_id: int, actor: str) -> Proposa
 def write_forecast(
     store: ObjectStore,
     object_type: str,
-    pk: str,
+    id: str,
     metric: str,
     horizon_hours: float,
     point: float,
@@ -118,7 +252,7 @@ def write_forecast(
     try:
         forecast = store.put_forecast(
             object_type,
-            pk,
+            id,
             metric,
             horizon_hours,
             point,
@@ -144,25 +278,3 @@ def forecast_actionable(store: ObjectStore, forecast: Forecast) -> bool:
         forecast.confidence,
         store.ontology.ontology.auto_apply_min_confidence,
     )
-
-
-def _execute(
-    store: ObjectStore,
-    kind: ProposalKind,
-    payload: dict[str, Any],
-) -> list[StoredObject]:
-    if kind == "type_definition":
-        try:
-            type_def = ObjectTypeDef.model_validate(payload)
-        except Exception as exc:
-            raise ProposalError(str(exc)) from exc
-        store.register_object_type(type_def)
-        return []
-    object_type = payload.get("object_type")
-    properties = payload.get("properties")
-    if not isinstance(object_type, str) or not isinstance(properties, dict):
-        raise ProposalError("classification payload needs object_type and properties")
-    try:
-        return [store.upsert_object(object_type, properties)]
-    except (KeyError, ValueError) as exc:
-        raise ProposalError(str(exc)) from exc

@@ -47,7 +47,7 @@ def test_new_type_auto_then_classify(client: TestClient):
         "/ai/types",
         json={
             "confidence": 0.86,
-            "type": {
+            "type_def": {
                 "api_name": "Return",
                 "primary_key": "id",
                 "title_property": "id",
@@ -80,7 +80,7 @@ def test_new_type_low_confidence_is_hitl(client: TestClient):
         "/ai/types",
         json={
             "confidence": 0.4,
-            "type": {
+            "type_def": {
                 "api_name": "Warehouse",
                 "primary_key": "id",
                 "title_property": "name",
@@ -120,8 +120,8 @@ def test_forecast_lives_on_the_package(client: TestClient):
     assert written.json()["forecast"]["actionable"] is True
 
     box = client.get("/objects/Package/1Z999").json()
-    assert box["predictions"][0]["metric"] == "late_risk"
-    assert box["predictions"][0]["model"] == "timesfm-2.5"
+    assert box["forecasts"][0]["metric"] == "late_risk"
+    assert box["forecasts"][0]["model"] == "timesfm-2.5"
 
     uncertain = client.post(
         "/ai/forecasts",

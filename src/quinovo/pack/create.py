@@ -1,9 +1,9 @@
-"""quinovo.pack_create — scaffold a new pack from a spec dict or YAML.
+"""quinovo.pack.create — scaffold a new pack from a spec dict or YAML.
 
 This is the only sanctioned way to author a pack from code. The spec is
-validated through the same loaders the kernel uses (load_ontology,
-load_ruleset) — a bad spec fails immediately, no half-written pack left
-on disk.
+validated through the same path the kernel uses (validate_pack: schema plus
+cross-file references) — a bad spec fails immediately after writing, and the
+rejected pack stays on disk for inspection.
 """
 
 from __future__ import annotations
@@ -13,8 +13,7 @@ from typing import Any
 
 import yaml
 
-from quinovo.inference.load import load_ruleset
-from quinovo.language.load import load_ontology
+from quinovo.pack.validate import validate_pack
 
 
 class PackCreateError(ValueError):
@@ -61,13 +60,11 @@ def create_pack(dest: Path, spec: dict[str, Any]) -> Path:
             yaml.safe_dump(spec["seed"], sort_keys=False), encoding="utf-8"
         )
 
-    # Validate through the real loaders. If the spec is malformed, this
-    # raises — and the half-written pack stays on disk for inspection.
-    # That's intentional: an empty pack is harder to debug than a pack
-    # that failed validation.
-    load_ontology(dest / "ontology.yaml")
-    if "inference" in spec:
-        load_ruleset(dest / "inference.yaml")
+    # Validate through the real loaders, including cross-file references.
+    # If the spec is malformed, this raises — and the half-written pack stays
+    # on disk for inspection. That's intentional: an empty pack is harder to
+    # debug than a pack that failed validation.
+    validate_pack(dest)
     return dest
 
 

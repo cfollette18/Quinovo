@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import Field, model_validator
+
+from quinovo.language.models import QuinovoModel
 
 RuleKind = Literal[
     "forecast_fact",
@@ -12,43 +14,42 @@ RuleKind = Literal[
     "join_links",
 ]
 
-
-class InferenceModel(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+ConfidenceSource = Literal["forecast"]
 
 
-class ForecastWhen(InferenceModel):
+class ForecastWhen(QuinovoModel):
     metric: str
     point_gte: float
 
 
-class FactWhen(InferenceModel):
+class FactWhen(QuinovoModel):
     predicate: str
     equals: str
 
 
-class PropertyWhen(InferenceModel):
+class PropertyWhen(QuinovoModel):
     api_name: str
     equals: str
 
 
-class ThenFact(InferenceModel):
+class ThenFact(QuinovoModel):
     predicate: str
     value: str
 
 
-class ThenLink(InferenceModel):
+class ThenLink(QuinovoModel):
     link_type: str
     to_type: str
     to_id: str
 
 
-class InferenceRule(InferenceModel):
+class InferenceRule(QuinovoModel):
     api_name: str
     kind: RuleKind
     description: str = ""
     source_type: str
-    confidence: float | Literal["forecast"] = 0.9
+    confidence: float | None = None
+    confidence_from: ConfidenceSource | None = None
     when_forecast: ForecastWhen | None = None
     when_fact: FactWhen | None = None
     when_property: PropertyWhen | None = None
@@ -58,8 +59,16 @@ class InferenceRule(InferenceModel):
     then_fact: ThenFact | None = None
     then_link: ThenLink | None = None
 
+    def resolved_confidence(self) -> float:
+        """Static confidence. Forecast-sourced rules resolve at fire time."""
+        return self.confidence if self.confidence is not None else 0.9
+
     @model_validator(mode="after")
     def premises_match_kind(self) -> InferenceRule:
+        if self.confidence is not None and self.confidence_from is not None:
+            raise ValueError(
+                f"{self.api_name}: set confidence or confidence_from, not both"
+            )
         match self.kind:
             case "forecast_fact":
                 if self.when_forecast is None or self.then_fact is None:
@@ -87,5 +96,5 @@ class InferenceRule(InferenceModel):
         return self
 
 
-class InferenceRuleset(InferenceModel):
+class InferenceRuleset(QuinovoModel):
     rules: list[InferenceRule] = Field(default_factory=list)

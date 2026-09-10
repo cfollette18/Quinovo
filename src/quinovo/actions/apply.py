@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from pydantic import ValidationError
+
+from quinovo.actions.dispatch import DispatchError, dispatch
 from quinovo.engine.store import AuditRow, ObjectStore, StoredObject
-from quinovo.language.models import ActionParameterDef
+from quinovo.language.models import ActionParameterDef, ObjectRef
 from quinovo.policy import ActionChannel, PolicyError, asserted_recommendation
 from quinovo.security import Guard, SecurityError
 
@@ -52,13 +55,21 @@ def apply_action(
     for param in spec.parameters:
         raw = parameters.get(param.api_name)
         if param.type == "object":
-            if not isinstance(raw, dict) or "id" not in raw:
+            try:
+                ref = ObjectRef.model_validate(raw)
+            except ValidationError as exc:
                 raise ActionError(
-                    f"parameter {param.api_name} must be an object reference {{'id': ...}}"
+                    f"parameter {param.api_name} must be an object reference "
+                    "{'type': ..., 'id': ...}"
+                ) from exc
+            if param.object_type and ref.type != param.object_type:
+                raise ActionError(
+                    f"parameter {param.api_name} expects a {param.object_type} reference, "
+                    f"got {ref.type}"
                 )
-            obj = store.get_object(param.object_type or "", str(raw["id"]))
+            obj = store.get_object(ref.type, ref.id)
             if obj is None:
-                raise ActionError(f"missing {param.object_type}:{raw['id']}")
+                raise ActionError(f"missing {ref.type}:{ref.id}")
             resolved[param.api_name] = obj
         else:
             if raw is None:
@@ -109,28 +120,62 @@ def apply_action(
         for created in spec.creates:
             raw_id = scalars.get(created.id_parameter) or parameters.get(created.id_parameter)
             if raw_id is None and created.id_parameter in resolved:
-                raw_id = resolved[created.id_parameter].primary_key
+                raw_id = resolved[created.id_parameter].id
             if raw_id is None:
                 raise ActionError(f"create {created.object_type} missing id")
             props = dict(created.set)
             type_def = store.ontology.object_type(created.object_type)
             props[type_def.primary_key] = str(raw_id)
             updated = store.upsert_object(created.object_type, props, source="action")
-            store.mark_overlay(created.object_type, updated.primary_key, list(created.set))
+            store.mark_overlay(created.object_type, updated.id, list(created.set))
             edited.append(updated)
         for edit in spec.edits:
             current = resolved[edit.parameter]
             if edit.delete:
-                store.delete_object(current.object_type, current.primary_key)
+                store.delete_object(current.object_type, current.id)
                 continue
             merged = dict(current.properties)
             merged.update(edit.set)
             updated = store.upsert_object(current.object_type, merged, source="action")
-            store.mark_overlay(current.object_type, updated.primary_key, list(edit.set))
+            store.mark_overlay(current.object_type, updated.id, list(edit.set))
             resolved[edit.parameter] = updated
             edited.append(updated)
         audit = store.append_audit(action_type, actor, recorded, "applied")
     except Exception:
         store.append_audit(action_type, actor, recorded, "failed")
         raise
+    _fire_target(store, action_type, parameters, audit, actor)
     return edited, audit
+
+
+def _fire_target(
+    store: ObjectStore,
+    action_type: str,
+    parameters: dict[str, Any],
+    audit: AuditRow,
+    actor: str,
+) -> None:
+    """Fire a registered write-back target for this action, if one exists.
+
+    Failures are recorded in the audit log but never undo the local apply — the
+    ontology is the system of record; the write-back is a side effect. A failed
+    dispatch is surfaced as a separate audit row so a human can retry.
+    """
+    target = store.get_action_target(action_type)
+    if target is None or not target.enabled:
+        return
+    try:
+        result = dispatch(store, target, action_type, parameters, audit)
+        store.append_audit(
+            "write_back",
+            actor,
+            {"action_type": action_type, "audit_id": audit.id, "result": result},
+            "applied",
+        )
+    except DispatchError as exc:
+        store.append_audit(
+            "write_back",
+            actor,
+            {"action_type": action_type, "audit_id": audit.id, "error": str(exc)},
+            "failed",
+        )

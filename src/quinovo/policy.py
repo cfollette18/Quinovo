@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
-from quinovo.engine.store import InferredFact, ObjectStore, StoredObject
+if TYPE_CHECKING:
+    from quinovo.engine.store import InferredFact, ObjectStore, StoredObject
 
 DEFAULT_AUTO_APPLY_MIN_CONFIDENCE = 0.8
 
@@ -33,7 +34,7 @@ def asserted_recommendation(
     matches = [
         fact
         for fact in store.list_inferred_facts(
-            target.object_type, target.primary_key, status="asserted"
+            target.object_type, target.id, status="asserted"
         )
         if fact.predicate == "recommended_action" and fact.value.startswith(prefix)
     ]
@@ -42,11 +43,11 @@ def asserted_recommendation(
         if not matches:
             raise PolicyError(
                 f"fact {fact_id} is not an asserted {prefix} recommendation on "
-                f"{target.object_type}:{target.primary_key}"
+                f"{target.object_type}:{target.id}"
             )
     if not matches:
         raise PolicyError(
             f"mcp apply_action {action_type!r} needs an asserted recommended_action "
-            f"on {target.object_type}:{target.primary_key}"
+            f"on {target.object_type}:{target.id}"
         )
     return matches[-1]

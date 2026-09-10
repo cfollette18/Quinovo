@@ -6,24 +6,24 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import Field
 
+from quinovo.engine.payloads import function_object_payload
 from quinovo.engine.store import ObjectStore
+from quinovo.language.models import QuinovoModel
 
 
 class FunctionError(Exception):
     pass
 
 
-class FunctionDef(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class FunctionDef(QuinovoModel):
     api_name: str
     source: str
     description: str = ""
 
 
-class FunctionManifest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class FunctionManifest(QuinovoModel):
     functions: list[FunctionDef] = Field(default_factory=list)
 
 
@@ -44,23 +44,20 @@ def run_function(
     if "import " in source or "__" in source or "open(" in source:
         raise FunctionError(f"{spec.api_name}: disallowed token in function source")
 
-    def get_object(object_type: str, pk: str) -> dict[str, Any] | None:
-        obj = store.get_object(object_type, pk)
+    def get_object(object_type: str, id: str) -> dict[str, Any] | None:
+        obj = store.get_object(object_type, id)
         if obj is None:
             return None
-        return {"type": obj.object_type, "id": obj.primary_key, "properties": obj.properties}
+        return function_object_payload(obj)
 
-    def search_around(object_type: str, pk: str, side: str) -> list[dict[str, Any]]:
+    def search_around(object_type: str, id: str, side: str) -> list[dict[str, Any]]:
         return [
-            {"type": item.object_type, "id": item.primary_key, "properties": item.properties}
-            for item in store.search_around(object_type, pk, side)
+            function_object_payload(item)
+            for item in store.search_around(object_type, id, side)
         ]
 
     def list_objects(object_type: str) -> list[dict[str, Any]]:
-        return [
-            {"type": item.object_type, "id": item.primary_key, "properties": item.properties}
-            for item in store.list_objects(object_type)
-        ]
+        return [function_object_payload(item) for item in store.list_objects(object_type)]
 
     ns: dict[str, Any] = {
         "__builtins__": {

@@ -6,54 +6,25 @@ from typing import Any
 
 
 def tool_specs() -> list[dict[str, Any]]:
+    """Derived from the FastMCP registry so the contract cannot drift from mcp/server.py."""
+    from quinovo.mcp.server import contract_registry
+
     return [
-        {
-            "name": "list_object_types",
-            "description": "List object types in the loaded pack.",
-        },
-        {
-            "name": "get_object",
-            "description": "Load one object by type and primary key, including inferred facts.",
-        },
-        {
-            "name": "search_around",
-            "description": "Walk a named link side defined by the loaded pack.",
-        },
-        {
-            "name": "filter_objects",
-            "description": "Object-set read: list objects of a type, optionally by property equals.",
-        },
-        {
-            "name": "list_inferred_facts",
-            "description": "List inferred facts. Unattended agents should keep status=asserted.",
-        },
-        {
-            "name": "run_inference",
-            "description": "Forward-chain typed inference over objects, links, and forecasts.",
-        },
-        {
-            "name": "list_actions",
-            "description": "List named actions. These are the only legal writes.",
-        },
-        {
-            "name": "apply_action",
-            "description": "Apply a named action. Never PATCH a row.",
-        },
-        {
-            "name": "get_series",
-            "description": "Read a time-series window on an object metric.",
-        },
-        {
-            "name": "explain_fact",
-            "description": "Provenance for an inferred fact: rule, premises, forecast if any.",
-        },
+        {"name": tool.name, "description": tool.description or ""}
+        for tool in contract_registry()._tool_manager.list_tools()
     ]
 
 
 def hermes_skill() -> dict[str, Any]:
     return {
         "name": "quinovo",
-        "description": "Operational ontology. Read typed links, infer, apply_action only.",
+        "description": (
+            "Operational ontology. It ticks itself in the background — never "
+            "ask for 'quinovo tick'. Call remember at the end of every turn "
+            "with the raw text (save_turn only when already structured). "
+            "Propose packs and rules; humans only approve HITL. "
+            "Read/write objects and links."
+        ),
         "tools": tool_specs(),
     }
 
@@ -66,6 +37,10 @@ def adk_function_tools() -> str:
         "from google.adk.tools import FunctionTool",
         "",
         "def quinovo_adk_tools(kernel):",
+        "    def tick(actor: str = 'autonomous'):",
+        "        return kernel.tick(actor)",
+        "    def remember(text: str, topic: str = 'quinovo', session_id: str = 'autonomous', actor: str = 'adk-agent'):",
+        "        return kernel.remember(text, topic=topic, session_id=session_id, actor=actor)",
         "    def list_object_types():",
         "        return kernel.list_object_types()",
         "    def get_object(object_type: str, id: str):",
@@ -76,12 +51,20 @@ def adk_function_tools() -> str:
         "        return kernel.apply_action(action_type, parameters, actor, channel='mcp')",
         "    def run_inference():",
         "        return kernel.run_inference()",
+        "    def propose_rule(rule: dict, confidence: float, actor: str = 'adk-agent'):",
+        "        return kernel.propose('inference_rule', rule, confidence, actor)",
+        "    def approve_proposal(proposal_id: int, actor: str = 'human'):",
+        "        return kernel.approve_proposal(proposal_id, actor)",
         "    return [",
+        "        FunctionTool(tick),",
+        "        FunctionTool(remember),",
         "        FunctionTool(list_object_types),",
         "        FunctionTool(get_object),",
         "        FunctionTool(search_around),",
         "        FunctionTool(run_inference),",
         "        FunctionTool(apply_action),",
+        "        FunctionTool(propose_rule),",
+        "        FunctionTool(approve_proposal),",
         "    ]",
         "",
     ]

@@ -6,13 +6,14 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import Field
 
 from quinovo.engine.store import ObjectStore, StoredObject
+from quinovo.language.models import QuinovoModel
 
 
-class SecurityModel(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class SecurityModel(QuinovoModel):
+    pass
 
 
 class RoleDef(SecurityModel):
@@ -80,8 +81,8 @@ class Guard:
         if as_object is None:
             return False
         as_type, as_id = as_object.split(":", 1)
-        neighbors = self.store.search_around(obj.object_type, obj.primary_key, side)
-        return any(n.object_type == as_type and n.primary_key == as_id for n in neighbors)
+        neighbors = self.store.search_around(obj.object_type, obj.id, side)
+        return any(n.object_type == as_type and n.id == as_id for n in neighbors)
 
     def redact(self, actor: str, obj: StoredObject) -> dict[str, Any]:
         _name, role, _as = self.role_for(actor)
@@ -94,7 +95,7 @@ class Guard:
             raise SecurityError(f"{actor} cannot submit {action_type}")
         for obj in targets:
             if not self.can_read(actor, obj):
-                raise SecurityError(f"{actor} cannot act on {obj.object_type}:{obj.primary_key}")
+                raise SecurityError(f"{actor} cannot act on {obj.object_type}:{obj.id}")
 
     def mcp_unattended_allowed(self, actor: str, action_type: str) -> bool:
         _name, role, _as = self.role_for(actor)

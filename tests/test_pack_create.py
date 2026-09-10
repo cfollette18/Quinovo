@@ -1,4 +1,4 @@
-"""quinovo.pack_create — scaffold a new pack from a spec dict or YAML.
+"""quinovo.pack.create — scaffold a new pack from a spec dict or YAML.
 
 The spec's `ontology` key is the full ontology document shape that
 `load_ontology` validates: a top-level mapping with `ontology: {meta}` and
@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from quinovo.pack_create import PackCreateError, create_pack
+from quinovo.pack.create import PackCreateError, create_pack
 
 
 def _widget_type() -> dict:
