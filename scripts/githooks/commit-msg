@@ -1,0 +1,9 @@
+#!/bin/sh
+# Strip Cursor Agent attribution so GitHub contributors stay cfollette18.
+set -eu
+msg_file="$1"
+tmp="${msg_file}.quinovo-strip"
+grep -v -E -i \
+  'Co-authored-by:[[:space:]]*Cursor|Made-with:[[:space:]]*Cursor|cursoragent@cursor\.com' \
+  "$msg_file" > "$tmp" || true
+mv "$tmp" "$msg_file"

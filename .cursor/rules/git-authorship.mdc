@@ -1,0 +1,11 @@
+---
+description: Quinovo GitHub commits are frequent and authored only as cfollette18
+alwaysApply: true
+---
+
+# Git authorship
+
+- Commit Quinovo work in small, frequent commits and push to `origin` (`cfollette18/Quinovo`).
+- Author and committer are `cfollette18 <cleefollette@gmail.com>`.
+- Never add `Co-authored-by: Cursor`, `Made with Cursor`, `cursoragent@cursor.com`, or `git commit --trailer`.
+- Install `scripts/githooks/commit-msg` (see `make hooks`). If a trailer still appears on a commit you just created and have not pushed, amend it out.
