@@ -1,61 +1,75 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 640" role="img" aria-labelledby="title desc">
   <title id="title">Quinovo four primitives</title>
-  <desc id="desc">Data, Logic, Action, and Security  the four primitives of the Quinovo ontology.</desc>
-  <rect width="1200" height="640" fill="#0e0e0e"/>
-  <text x="60" y="64" fill="#eee" font-family="ui-sans-serif, system-ui, sans-serif" font-size="28" font-weight="600">The ontology is four primitives</text>
-  <text x="60" y="96" fill="#9a9a9a" font-family="ui-sans-serif, system-ui, sans-serif" font-size="16">If any one is missing, it is a different product.</text>
+  <desc id="desc">Data, Logic, Action, and Security — the four primitives of the Quinovo ontology.</desc>
+  <rect width="1200" height="640" fill="#0B2026"/>
+  <g fill="#1B3139" opacity="0.55">
+    <rect x="0" y="0" width="1200" height="1"/>
+    <rect x="0" y="80" width="1200" height="1"/>
+    <rect x="0" y="160" width="1200" height="1"/>
+    <rect x="0" y="240" width="1200" height="1"/>
+    <rect x="0" y="320" width="1200" height="1"/>
+    <rect x="0" y="400" width="1200" height="1"/>
+    <rect x="0" y="480" width="1200" height="1"/>
+    <rect x="0" y="560" width="1200" height="1"/>
+  </g>
+  <rect x="48" y="28" width="18" height="7" fill="#FF3621"/>
+  <rect x="54" y="37.5" width="18" height="7" fill="#FF3621"/>
+  <rect x="48" y="47" width="18" height="7" fill="#FF3621"/>
+  <text x="78" y="50" fill="#F9F7F4" font-family="DM Sans, Helvetica Neue, Arial, sans-serif" font-size="18" font-weight="500">quinovo</text>
+  <text x="60" y="92" fill="#F9F7F4" font-family="DM Sans, Helvetica Neue, Arial, sans-serif" font-size="28" font-weight="500">The ontology is four primitives</text>
+  <text x="60" y="120" fill="#90A5B1" font-family="DM Sans, Helvetica Neue, Arial, sans-serif" font-size="15">If any one is missing, it is a different product.</text>
 
-  <g transform="translate(48,140)">
-    <rect width="258" height="420" fill="#161616" stroke="#2a2a2a"/>
-    <circle cx="36" cy="44" r="10" fill="#d4a017"/>
-    <text x="56" y="50" fill="#eee" font-family="ui-sans-serif, system-ui, sans-serif" font-size="20" font-weight="600">Data</text>
-    <text x="24" y="96" fill="#9a9a9a" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">Objects, properties,</text>
-    <text x="24" y="116" fill="#9a9a9a" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">named links, series.</text>
-    <rect x="36" y="160" width="88" height="36" rx="18" fill="#1f1f1f" stroke="#d4a017"/>
-    <rect x="134" y="200" width="88" height="36" rx="18" fill="#1f1f1f" stroke="#d4a017"/>
-    <rect x="36" y="248" width="88" height="36" rx="18" fill="#1f1f1f" stroke="#d4a017"/>
-    <line x1="80" y1="196" x2="178" y2="218" stroke="#d4a017" stroke-width="1.5"/>
-    <line x1="80" y1="248" x2="178" y2="218" stroke="#d4a017" stroke-width="1.5"/>
-    <text x="24" y="340" fill="#eee" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">The digital twin.</text>
-    <text x="24" y="372" fill="#666" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">Without it: a wiki.</text>
+  <g transform="translate(48,148)">
+    <rect width="258" height="440" fill="#F9F7F4"/>
+    <rect width="6" height="440" fill="#FF3621"/>
+    <text x="24" y="40" fill="#1B3139" font-family="DM Sans, Helvetica Neue, Arial, sans-serif" font-size="20" font-weight="500">Data</text>
+    <text x="24" y="72" fill="#90A5B1" font-family="DM Sans, Helvetica Neue, Arial, sans-serif" font-size="14">Objects, properties,</text>
+    <text x="24" y="92" fill="#90A5B1" font-family="DM Sans, Helvetica Neue, Arial, sans-serif" font-size="14">named links, series.</text>
+    <rect x="36" y="150" width="88" height="36" fill="#FFFFFF" stroke="#E4E2DD"/>
+    <rect x="134" y="190" width="88" height="36" fill="#FFFFFF" stroke="#E4E2DD"/>
+    <rect x="36" y="238" width="88" height="36" fill="#FFFFFF" stroke="#E4E2DD"/>
+    <line x1="80" y1="186" x2="178" y2="208" stroke="#1B5162" stroke-width="1.5"/>
+    <line x1="80" y1="238" x2="178" y2="208" stroke="#1B5162" stroke-width="1.5"/>
+    <text x="24" y="340" fill="#1B3139" font-family="DM Sans, Helvetica Neue, Arial, sans-serif" font-size="13">The digital twin.</text>
+    <text x="24" y="372" fill="#90A5B1" font-family="DM Sans, Helvetica Neue, Arial, sans-serif" font-size="12">Without it: a wiki.</text>
   </g>
 
-  <g transform="translate(330,140)">
-    <rect width="258" height="420" fill="#161616" stroke="#2a2a2a"/>
-    <circle cx="36" cy="44" r="10" fill="#d4a017"/>
-    <text x="56" y="50" fill="#eee" font-family="ui-sans-serif, system-ui, sans-serif" font-size="20" font-weight="600">Logic</text>
-    <text x="24" y="96" fill="#9a9a9a" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">Rules, functions,</text>
-    <text x="24" y="116" fill="#9a9a9a" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">forecasts, inference.</text>
-    <path d="M40 200 C 80 140, 180 140, 220 200" fill="none" stroke="#d4a017" stroke-width="2"/>
-    <path d="M40 230 C 90 280, 170 280, 220 230" fill="none" stroke="#6a5a20" stroke-width="2"/>
-    <circle cx="40" cy="200" r="5" fill="#d4a017"/>
-    <circle cx="220" cy="200" r="5" fill="#d4a017"/>
-    <text x="24" y="340" fill="#eee" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">Typed conclusions.</text>
-    <text x="24" y="372" fill="#666" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">Without it: pretty CRUD.</text>
+  <g transform="translate(330,148)">
+    <rect width="258" height="440" fill="#F9F7F4"/>
+    <rect width="6" height="440" fill="#2272B4"/>
+    <text x="24" y="40" fill="#1B3139" font-family="DM Sans, Helvetica Neue, Arial, sans-serif" font-size="20" font-weight="500">Logic</text>
+    <text x="24" y="72" fill="#90A5B1" font-family="DM Sans, Helvetica Neue, Arial, sans-serif" font-size="14">Rules, functions,</text>
+    <text x="24" y="92" fill="#90A5B1" font-family="DM Sans, Helvetica Neue, Arial, sans-serif" font-size="14">forecasts, inference.</text>
+    <path d="M40 190 C 80 130, 180 130, 220 190" fill="none" stroke="#FF3621" stroke-width="2"/>
+    <path d="M40 220 C 90 270, 170 270, 220 220" fill="none" stroke="#1B5162" stroke-width="2"/>
+    <circle cx="40" cy="190" r="5" fill="#FF3621"/>
+    <circle cx="220" cy="190" r="5" fill="#FF3621"/>
+    <text x="24" y="340" fill="#1B3139" font-family="DM Sans, Helvetica Neue, Arial, sans-serif" font-size="13">Typed conclusions.</text>
+    <text x="24" y="372" fill="#90A5B1" font-family="DM Sans, Helvetica Neue, Arial, sans-serif" font-size="12">Without it: pretty CRUD.</text>
   </g>
 
-  <g transform="translate(612,140)">
-    <rect width="258" height="420" fill="#161616" stroke="#2a2a2a"/>
-    <circle cx="36" cy="44" r="10" fill="#d4a017"/>
-    <text x="56" y="50" fill="#eee" font-family="ui-sans-serif, system-ui, sans-serif" font-size="20" font-weight="600">Action</text>
-    <text x="24" y="96" fill="#9a9a9a" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">Named transactions.</text>
-    <text x="24" y="116" fill="#9a9a9a" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">The only legal writes.</text>
-    <rect x="54" y="188" width="150" height="48" fill="#d4a017"/>
-    <text x="129" y="218" text-anchor="middle" fill="#0e0e0e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="600">apply_action</text>
-    <text x="24" y="340" fill="#eee" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">Agents never PATCH.</text>
-    <text x="24" y="372" fill="#666" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">Without it: a semantic layer.</text>
+  <g transform="translate(612,148)">
+    <rect width="258" height="440" fill="#F9F7F4"/>
+    <rect width="6" height="440" fill="#00A972"/>
+    <text x="24" y="40" fill="#1B3139" font-family="DM Sans, Helvetica Neue, Arial, sans-serif" font-size="20" font-weight="500">Action</text>
+    <text x="24" y="72" fill="#90A5B1" font-family="DM Sans, Helvetica Neue, Arial, sans-serif" font-size="14">Named transactions.</text>
+    <text x="24" y="92" fill="#90A5B1" font-family="DM Sans, Helvetica Neue, Arial, sans-serif" font-size="14">The only legal writes.</text>
+    <rect x="54" y="188" width="150" height="44" fill="#FF3621"/>
+    <text x="129" y="216" text-anchor="middle" fill="#FFFFFF" font-family="DM Sans, Helvetica Neue, Arial, sans-serif" font-size="14" font-weight="500">apply_action</text>
+    <text x="24" y="340" fill="#1B3139" font-family="DM Sans, Helvetica Neue, Arial, sans-serif" font-size="13">Agents never PATCH.</text>
+    <text x="24" y="372" fill="#90A5B1" font-family="DM Sans, Helvetica Neue, Arial, sans-serif" font-size="12">Without it: a semantic layer.</text>
   </g>
 
-  <g transform="translate(894,140)">
-    <rect width="258" height="420" fill="#161616" stroke="#2a2a2a"/>
-    <circle cx="36" cy="44" r="10" fill="#d4a017"/>
-    <text x="56" y="50" fill="#eee" font-family="ui-sans-serif, system-ui, sans-serif" font-size="20" font-weight="600">Security</text>
-    <text x="24" y="96" fill="#9a9a9a" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">Type, row, property.</text>
-    <text x="24" y="116" fill="#9a9a9a" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">Evaluated at call time.</text>
-    <rect x="48" y="176" width="162" height="110" fill="none" stroke="#d4a017" stroke-dasharray="4 4"/>
-    <rect x="72" y="204" width="50" height="28" fill="#2a2a2a"/>
-    <rect x="136" y="204" width="50" height="28" fill="#111" stroke="#444"/>
-    <text x="24" y="340" fill="#eee" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">Humans and agents.</text>
-    <text x="24" y="372" fill="#666" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">Without it: root.</text>
+  <g transform="translate(894,148)">
+    <rect width="258" height="440" fill="#F9F7F4"/>
+    <rect width="6" height="440" fill="#1B3139"/>
+    <text x="24" y="40" fill="#1B3139" font-family="DM Sans, Helvetica Neue, Arial, sans-serif" font-size="20" font-weight="500">Security</text>
+    <text x="24" y="72" fill="#90A5B1" font-family="DM Sans, Helvetica Neue, Arial, sans-serif" font-size="14">Type, row, property.</text>
+    <text x="24" y="92" fill="#90A5B1" font-family="DM Sans, Helvetica Neue, Arial, sans-serif" font-size="14">Evaluated at call time.</text>
+    <rect x="48" y="168" width="162" height="110" fill="none" stroke="#1B5162" stroke-dasharray="4 4"/>
+    <rect x="72" y="196" width="50" height="28" fill="#EEEDE9"/>
+    <rect x="136" y="196" width="50" height="28" fill="#FFFFFF" stroke="#E4E2DD"/>
+    <text x="24" y="340" fill="#1B3139" font-family="DM Sans, Helvetica Neue, Arial, sans-serif" font-size="13">Humans and agents.</text>
+    <text x="24" y="372" fill="#90A5B1" font-family="DM Sans, Helvetica Neue, Arial, sans-serif" font-size="12">Without it: root.</text>
   </g>
 </svg>

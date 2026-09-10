@@ -39,12 +39,17 @@ The teaching pack is a box, a buyer, and a shipper. Late forecast → `at_risk` 
 
 ```bash
 make test
+quinovo serve
 quinovo mcp --pack packs/example
 quinovo init ./my-world
 quinovo init --from clinic ./my-clinic
 ```
 
-MCP tools are generated from the loaded pack: `list_object_types`, `get_object`, `search_around`, `filter_objects`, `list_inferred_facts`, `run_inference`, `list_actions`, `apply_action`, `get_series`, `explain_fact`.
+MCP tools are generated from the loaded pack: `remember`, `tick`, `save_turn`, `list_object_types`, `get_object`, `search_around`, `filter_objects`, `list_inferred_facts`, `run_inference`, `list_actions`, `apply_action`, `get_series`, `explain_fact`.
+
+Quinovo ticks itself in the background — agents call `remember` at the end of every turn with raw text and never need to be told "quinovo tick".
+
+The workspace rail includes **Train**: filter live things, connections, noticed facts, and changes into a named set, then prepare a **small specialist** job. That writes a JSONL file under `.data/train/` — it does not run a GPU trainer unless you point `QUINOVO_TRAIN_CMD` at one. The Settings language model stays a separate authoring path.
 
 ## Packs
 
@@ -56,5 +61,25 @@ A pack is a domain. Quinovo is not.
 | `packs/clinic` | Honesty check: a second domain in the same binary. |
 
 Read [docs/ontology.md](docs/ontology.md).
+
+## Why Quinovo
+
+An operational ontology is the nouns and verbs of a business. Quinovo makes a different bet than the closed, consultant-driven approach:
+
+1. **Discovered, not hand-built.** The model proposes the types, rules, and actions from your live data. You only approve.
+2. **MCP is the connector layer.** No proprietary marketplace. Any MCP-compatible client reads and writes the ontology; Quinovo also exposes itself as MCP.
+3. **Small specialists, not one giant model.** Filter the ontology into a dataset and train a small specialist on just your data (the Train tab).
+4. **HITL is the only human job.** The loop runs itself; below 0.8 parks for review, 0.8+ auto-applies.
+5. **Open source.** Apache-2.0. The kernel is yours.
+6. **Security is a primitive.** Data, Logic, Action, Security — security is first-class in the kernel.
+
+Read [docs/why-quinovo.md](docs/why-quinovo.md) and [docs/sdk.md](docs/sdk.md).
+
+## Connectors, logic, and systems of action
+
+- **Data flows in** through `register_source` / `pull_source` / `POST /ingest/{source}` (http, json, csv, webhook, sql, mcp). The connector layer is MCP — not a marketplace of hundreds of adapters.
+- **Logic lives anywhere** through `register_logic_source` / `run_logic_source` (http). Logic does not have to live in YAML rules.
+- **Actions write back** through `register_action_target` (webhook, slack, email, mcp, gated sql). Applying an action drives a real change in an external system, audited. Failures never undo the local apply.
+- **LLM reasons over the ontology** through `propose_action` — propose applying a named action with confidence; HITL below 0.8.
 
 Apache-2.0.
