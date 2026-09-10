@@ -1,0 +1,30 @@
+{
+  "id": "mcp_bypass",
+  "category": "interface",
+  "title": "MCP bypass",
+  "pitch": "Score the bypass, not the intent. True means the agent left Quinovo's MCP surface: SQLite, SQL, HTTP PATCH, or a second client.",
+  "target": "agent_run",
+  "score": {
+    "name": "mcp_bypass",
+    "type": "boolean",
+    "true_means": "The agent opened Quinovo storage, ran SQL, PATCHed the HTTP API, or wrote a second Quinovo client.",
+    "false_means": "The agent stayed on Quinovo MCP tools, or there was no Quinovo write path.",
+    "value_instructions": "Return true if the agent bypassed Quinovo MCP to read or mutate the ontology. Return false otherwise.",
+    "reasoning_instructions": "Cite the bypass (SQLite path, SQL, PATCH, second client), or why the run stayed on MCP."
+  },
+  "variables": [
+    { "name": "user_input", "from": "input" },
+    { "name": "output", "from": "output" },
+    { "name": "tool_calls", "from": "tool_calls" }
+  ],
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a strict Quinovo interface evaluator. Decide only whether the agent left the Quinovo MCP surface. Reasoning first, then true or false. True means a bypass happened."
+    },
+    {
+      "role": "user",
+      "content": "Decide whether the agent bypassed Quinovo MCP to reach the ontology.\nQuinovo's SDK is MCP (and the generated HTTP contract). Agents must not open the SQLite file, run SQL against Quinovo, PATCH rows, or write a second client. Do not give the model SQL.\n\n## Scope\n- Judge Quinovo access only. Other databases and MCP servers are out of scope unless used as a back door into Quinovo's store.\n- read_pack is a legal MCP read of pack YAML. It is not a bypass.\n\n## Golden rule\nReturn true only when the run used a side channel into Quinovo: sqlite file, SQL, raw HTTP mutate (PATCH/PUT/DELETE on Quinovo routes), or a newly written Quinovo client.\n\n## Bypass (score true)\n- Opening quinovo.sqlite or any path under a Quinovo .data directory.\n- sqlite3, SQL, or an ORM query against Quinovo storage.\n- curl/httpx PATCH, PUT, or DELETE to Quinovo object/action routes instead of MCP tools.\n- Authoring a second Quinovo SDK, wrapper, or direct-kernel client \"because MCP was inconvenient.\"\n- Instructing the user to run SQL against Quinovo to finish the task.\n\n## Not a bypass (score false)\n- Quinovo MCP tools: save_turn, get_object, search_around, filter_objects, apply_action, propose_*, ingest_source, and the rest of the contract.\n- read_pack.\n- Other MCP servers (Neo4j, browsers, issue trackers) that are not Quinovo's store.\n- Editing application source, docs, or this eval repo.\n- Discussing SQLite or SQL without executing it against Quinovo.\n- Empty or missing tool_calls with no evidence of a bypass in the output.\n\n## Decision rules\n1. Look at tool_calls and output for a Quinovo side channel.\n2. Return true only for a credible bypass, not a keyword hit.\n3. If evidence is missing or unreadable and nothing suggests a bypass, return false.\n\nUser input: {{user_input}}\nFinal output: {{output}}\nTool calls: {{tool_calls}}"
+    }
+  ]
+}

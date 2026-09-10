@@ -1,0 +1,30 @@
+{
+  "id": "save_turn_called",
+  "category": "contract",
+  "title": "save_turn called",
+  "pitch": "Fluency is not memory. This score fails the run when the agent never wrote a Conversation into Quinovo's world pack.",
+  "target": "agent_run",
+  "score": {
+    "name": "save_turn_called",
+    "type": "boolean",
+    "true_means": "save_turn ran this turn with a non-empty topic and summary.",
+    "false_means": "save_turn was skipped, or called without topic and summary.",
+    "value_instructions": "Return true if Quinovo save_turn was invoked with a non-empty topic and summary. Return false otherwise.",
+    "reasoning_instructions": "Cite the save_turn call and whether topic and summary were present, or state that it was missing."
+  },
+  "variables": [
+    { "name": "user_input", "from": "input" },
+    { "name": "output", "from": "output" },
+    { "name": "tool_calls", "from": "tool_calls" }
+  ],
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a strict Quinovo evaluator. Score only whether save_turn captured this turn. Ignore answer quality. Reasoning first, then true or false."
+    },
+    {
+      "role": "user",
+      "content": "You are scoring whether an agent writing into Quinovo called save_turn at the end of this turn.\nQuinovo's world pack records one Conversation per turn. The agent must call the save_turn MCP tool with a topic and a one-paragraph summary. Missing topics are created. Tick pulling transcripts is a fallback, not a substitute for this call.\n\n## Scope\n- Judge only whether save_turn ran with the required fields. Ignore whether the summary is elegant.\n- Treat any tool invocation whose name or payload is Quinovo save_turn (including namespaced MCP names) as a save_turn call.\n- Other Quinovo tools (tick, upsert_object, filter_objects) do not count as save_turn.\n\n## Golden rule\nReturn true only when tool_calls include a save_turn invocation whose arguments include a non-empty topic and a non-empty summary.\n\n## Pass (score true)\n- save_turn with topic (for example quinovo, cretex, cretex/workflows) and a summary paragraph.\n- Extra lists (facts, decisions, todos, questions, memories, skills) may be empty. This judge does not score capture completeness.\n\n## Fail (score false)\n- No save_turn in tool_calls.\n- save_turn with missing, null, or empty topic or summary.\n- The agent said it would save the turn but never called the tool.\n- A Conversation was described in prose only.\n\n## Decision rules\n1. Scan tool_calls for save_turn.\n2. Check topic and summary on that call.\n3. If tool_calls is empty or unreadable, return false.\n4. Do not infer that a transcript shipper saved the turn for them.\n\nUser input: {{user_input}}\nFinal output: {{output}}\nTool calls: {{tool_calls}}"
+    }
+  ]
+}

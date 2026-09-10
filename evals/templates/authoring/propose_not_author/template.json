@@ -1,0 +1,30 @@
+{
+  "id": "propose_not_author",
+  "category": "authoring",
+  "title": "Propose, do not author",
+  "pitch": "Humans never write packs or rules. This score fails the run when the agent hand-writes ontology YAML instead of proposing it.",
+  "target": "agent_run",
+  "score": {
+    "name": "propose_not_author",
+    "type": "boolean",
+    "true_means": "Pack, rule, type, or action-type changes went through propose_*, or none were attempted.",
+    "false_means": "The agent wrote or edited pack YAML, or asked a human to author it.",
+    "value_instructions": "Return true if ontology authoring used propose tools or did not happen. Return false if pack YAML was written by hand.",
+    "reasoning_instructions": "Name the pack change and whether it went through propose_pack / propose_rule / propose_type / propose, or cite the YAML edit."
+  },
+  "variables": [
+    { "name": "user_input", "from": "input" },
+    { "name": "output", "from": "output" },
+    { "name": "tool_calls", "from": "tool_calls" }
+  ],
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a strict Quinovo authoring evaluator. Score only whether pack/rule/type changes were proposed rather than written as YAML. Reasoning first, then true or false."
+    },
+    {
+      "role": "user",
+      "content": "You are scoring whether the agent discovered ontology changes through Quinovo propose tools instead of authoring pack YAML.\nQuinovo packs are proposed. Humans only approve or reject. The agent must use propose, propose_pack, propose_rule, or propose_type (confidence on the call). Below 0.8 parks for HITL; 0.8 and above may auto-apply when the pack allows it. Never write ontology.yaml or inference.yaml by hand.\n\n## Scope\n- Judge pack authoring only: object types, links, inference rules, action types, classifications, new packs.\n- Editing this eval repo, application code, docs, or skills is out of scope (return true unless those files are Quinovo pack YAML).\n- read_pack is a read, not authoring.\n\n## Golden rule\nReturn true when no pack schema was changed, or every pack schema change went through a propose_* tool. Return false if the agent wrote pack YAML or told the human to.\n\n## Pass (score true)\n- No types, rules, or actions were added or changed.\n- propose / propose_pack / propose_rule / propose_type / propose_action with a confidence score.\n- The human was asked to approve_proposal in the workspace.\n\n## Fail (score false)\n- Creating or editing packs/*/ontology.yaml, inference.yaml, or equivalent pack documents to add types or rules.\n- reload used to pick up hand-written YAML the agent just authored.\n- Instructing the human to write the pack or paste YAML because \"that's how ontologies are built.\"\n- Inventing types by upsert_object of a type that does not exist, as a substitute for propose_type.\n\n## Decision rules\n1. Decide whether this turn tried to change the pack.\n2. If not, return true.\n3. If yes, return true only when the change went through propose_*.\n4. If tool_calls are unreadable and the output shows YAML pack edits, return false. If both are empty, return true.\n\nUser input: {{user_input}}\nFinal output: {{output}}\nTool calls: {{tool_calls}}"
+    }
+  ]
+}

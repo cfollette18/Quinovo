@@ -1,0 +1,6 @@
+{
+  "id": "epistemics",
+  "name": "epistemics",
+  "sampling": 0.2,
+  "attach_to": "agent_run"
+}

@@ -1,0 +1,30 @@
+{
+  "id": "twin_first",
+  "category": "epistemics",
+  "title": "Twin first",
+  "pitch": "Query the twin before answering it. This score fails the run when claims about Quinovo state are invented instead of read.",
+  "target": "agent_run",
+  "score": {
+    "name": "twin_first",
+    "type": "boolean",
+    "true_means": "Claims about Quinovo state came from read tools, or the turn made no such claims.",
+    "false_means": "The agent asserted ontology state without reading it, or invented objects the tools did not return.",
+    "value_instructions": "Return true if Quinovo-state claims are grounded in read tools or none were made. Return false if the agent invented twin state.",
+    "reasoning_instructions": "Cite the read tools that grounded the claim, or the invented object/fact that was not in tool results."
+  },
+  "variables": [
+    { "name": "user_input", "from": "input" },
+    { "name": "output", "from": "output" },
+    { "name": "tool_calls", "from": "tool_calls" }
+  ],
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a strict Quinovo epistemics evaluator. Score only whether claims about Quinovo state were read from the twin. Reasoning first, then true or false."
+    },
+    {
+      "role": "user",
+      "content": "You are scoring whether the agent queried Quinovo before answering questions about Quinovo.\nThe twin is the loaded pack: objects, named links, inferred facts, forecasts, proposals, pending actions. Read tools: list_object_types, get_object, search_around, filter_objects, list_inferred_facts, explain_fact, get_series, graph, list_actions, list_proposals, list_pending_actions, list_sources, contract. Properties are observed. Facts are inferred (rule + confidence). Forecasts carry an uncertainty band. If the twin does not know, the agent says the twin does not know.\n\n## Scope\n- Judge claims about Quinovo / pack / topic / fact / link / HITL queue state.\n- Coding, git, other systems, and Quinovo product docs are out of scope unless the agent presents them as live twin state.\n\n## Golden rule\nReturn true when the turn made no claim about live Quinovo state, or every such claim is grounded in a read-tool result (or an honest \"twin does not know\"). Return false when the agent invents or recalls objects, facts, or queue state as if they were current.\n\n## Pass (score true)\n- No question about the ontology was asked.\n- The agent called read tools, then answered from those results.\n- The agent said the twin does not know after a read returned empty.\n- The agent offered explain_fact for a cited inferred fact.\n- Distinguishing observed properties vs inferred facts vs forecasts.\n\n## Fail (score false)\n- Answering \"what's on topic cretex\" from memory without filter_objects or search_around.\n- Inventing object ids, fact predicates, or pending proposal contents not present in tool_calls results.\n- Treating training data about Quinovo as the live twin.\n- Filling gaps instead of saying the twin does not know.\n\n## Decision rules\n1. List claims in the output that are about live Quinovo state.\n2. If none, return true.\n3. For each claim, require a supporting read in tool_calls (or an explicit unknown).\n4. If tool_calls are missing or unreadable and the output asserts specific live objects/facts, return false. If the output makes no such claim, return true.\n\nUser input: {{user_input}}\nFinal output: {{output}}\nTool calls: {{tool_calls}}"
+    }
+  ]
+}

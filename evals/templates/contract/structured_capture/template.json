@@ -1,0 +1,30 @@
+{
+  "id": "structured_capture",
+  "category": "contract",
+  "title": "Structured capture",
+  "pitch": "Transcripts are not facts. This score tells you whether the turn's claims landed as typed Quinovo objects, or stayed as chat.",
+  "target": "agent_run",
+  "score": {
+    "name": "structured_capture",
+    "type": "categorical",
+    "labels": ["complete", "partial", "skipped", "none_needed", "unknown"],
+    "allow_multiple": false,
+    "value_instructions": "Choose exactly one label: complete, partial, skipped, none_needed, or unknown.",
+    "reasoning_instructions": "Name the material facts, decisions, todos, questions, memories, or skills the turn produced, then say which of those appear as typed objects on save_turn."
+  },
+  "variables": [
+    { "name": "user_input", "from": "input" },
+    { "name": "output", "from": "output" },
+    { "name": "tool_calls", "from": "tool_calls" }
+  ],
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a strict Quinovo evaluator. Score only whether this turn's material claims were written as typed objects on save_turn. Ignore style. Reasoning first, then the label. If mapped fields are empty or unreadable, choose unknown instead of guessing."
+    },
+    {
+      "role": "user",
+      "content": "You are scoring whether an agent captured this Quinovo turn as typed objects, not prose.\nThe capture contract: one Conversation via save_turn, plus each material Fact, Decision, OpenQuestion, Todo, Memory, and Skill as its own object. Facts use predicate, value, and confidence — not a single text blob. Nested topics use slashes (cretex/workflows).\n\n## Scope\n- Judge capture completeness only. save_turn_called is a different judge.\n- Material items are durable claims, choices, open work, unresolved questions, cross-session memories, and reusable procedures that this turn actually produced.\n- Greeting, clarifying questions, and \"I'll do that next\" with no new claim do not require objects.\n\n## Labels\n- complete: every material item from the turn appears as a typed object on save_turn (or equivalent upsert of those types linked to the conversation).\n- partial: save_turn (or equivalent) ran, but at least one material fact, decision, todo, question, memory, or skill is missing, or facts were stuffed into summary prose instead of objects.\n- skipped: the turn produced material items and there is no save_turn / typed capture of them.\n- none_needed: the turn produced nothing that belongs in the world pack.\n- unknown: user_input, output, or tool_calls is missing or unreadable.\n\n## Decision rules\n1. List the material items the user and agent actually produced this turn.\n2. Look at save_turn arguments (facts, decisions, todos, questions, memories, skills) and any upsert_object of those types.\n3. A Fact must have a predicate and value. A Decision must have a choice. A Todo or OpenQuestion must have text. Summary-only capture of a decision is partial, not complete.\n4. Empty lists are complete only when none_needed would also apply; otherwise they are skipped or partial.\n5. Do not require objects for implementation details that are not knowledge about the world (diff hunks, command output) unless the agent or user stated a durable fact or decision.\n\nUser input: {{user_input}}\nFinal output: {{output}}\nTool calls: {{tool_calls}}"
+    }
+  ]
+}

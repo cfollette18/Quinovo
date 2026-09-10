@@ -1,0 +1,6 @@
+{
+  "id": "governance",
+  "name": "governance",
+  "sampling": 1,
+  "attach_to": "agent_run"
+}

@@ -1,0 +1,6 @@
+{
+  "id": "authoring",
+  "name": "authoring",
+  "sampling": 1,
+  "attach_to": "agent_run"
+}
