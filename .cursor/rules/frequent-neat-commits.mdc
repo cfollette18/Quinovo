@@ -1,0 +1,14 @@
+---
+description: Commit frequently with neat, focused messages
+alwaysApply: true
+---
+
+# Frequent, neat commits
+
+Commit Quinovo work in small focused slices and push to `origin`.
+
+- Imperative subject that states the why, not a file list.
+- Add a one-sentence body when the why is not obvious from the subject.
+- One concern per commit. Do not mix a secret fix with a feature.
+- Do not use subjects like `checkpoint`, `wip`, `temp`, or `misc`.
+- Author and committer are `cfollette18`. No Cursor trailer.
