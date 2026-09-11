@@ -61,6 +61,9 @@ from quinovo.loop.tick import tick as run_tick
 from quinovo.pack.authoring import PackCreateError, create_pack, read_pack, write_pack_document
 from quinovo.pack.validate import validate_pack
 from quinovo.policy import ActionChannel
+from quinovo.recall import about as recall_about
+from quinovo.recall import briefing as recall_briefing
+from quinovo.recall import recall as recall_search
 from quinovo.security import Guard, load_security, seed_tuples
 from quinovo.semantic import remember_text
 from quinovo.topics import catalog_topics
@@ -671,6 +674,25 @@ class Kernel:
         return remember_text(
             self, text, topic=topic, session_id=session_id, role=role, actor=actor
         )
+
+    def recall(
+        self,
+        query: str,
+        *,
+        topic: str | None = None,
+        types: list[str] | None = None,
+        limit: int = 20,
+    ) -> dict[str, Any]:
+        """Ranked text search across every object type (see quinovo.recall)."""
+        return recall_search(self, query, topic=topic, types=types, limit=limit)
+
+    def about(self, name: str, *, limit: int = 20) -> dict[str, Any]:
+        """Everything the graph knows about one Entity or Topic, as sentences."""
+        return recall_about(self, name, limit=limit)
+
+    def briefing(self, *, limit: int = 10) -> dict[str, Any]:
+        """One page of what is live: topics, open work, decisions, memories, HITL."""
+        return recall_briefing(self, limit=limit)
 
     def read_pack(self) -> dict[str, Any]:
         return read_pack(self.pack_dir)

@@ -13,6 +13,9 @@ from quinovo.mcp.server import create_mcp
 
 EXPECTED_TOOLS = {
     "tick",
+    "briefing",
+    "about",
+    "recall",
     "remember",
     "save_turn",
     "list_object_types",

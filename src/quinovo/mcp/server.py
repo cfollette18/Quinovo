@@ -80,6 +80,47 @@ def _register_tools(mcp: FastMCP, kernel: Kernel, side_hint: str) -> None:
 
     @mcp.tool(
         description=(
+            "Start here. One page of what is live right now: active topics with "
+            "item counts, open and stale todos, open questions, recent decisions, "
+            "memories, the most-connected entities, the last few turns, and what "
+            "is waiting on a human. Call this at the start of every session "
+            "instead of listing objects."
+        )
+    )
+    def briefing(limit: int = 10) -> dict[str, Any]:
+        return kernel.briefing(limit=limit)
+
+    @mcp.tool(
+        description=(
+            "Everything the graph knows about one thing, as sentences. Pass an "
+            "Entity name or alias (Langfuse, Epicor, cfollette18) or a Topic id "
+            "(cretex, quinovo). Returns facts about it, facts that point at it, "
+            "related entities, todos/decisions/questions/memories that concern "
+            "it, and the turns that mentioned it. Call this before answering a "
+            "question about a system, person, project, or topic."
+        )
+    )
+    def about(name: str, limit: int = 20) -> dict[str, Any]:
+        return kernel.about(name, limit=limit)
+
+    @mcp.tool(
+        description=(
+            "Ranked search across every object type - facts, decisions, todos, "
+            "memories, entities, turns. Each hit is one human line with its "
+            "type, id, and topic. Scope with topic= (e.g. cretex) or types= "
+            "(e.g. ['Decision','Todo']). Use this before saying 'I don't know'."
+        )
+    )
+    def recall(
+        query: str,
+        topic: str | None = None,
+        types: list[str] | None = None,
+        limit: int = 20,
+    ) -> dict[str, Any]:
+        return kernel.recall(query, topic=topic, types=types, limit=limit)
+
+    @mcp.tool(
+        description=(
             "Capture one agent turn as a structured Conversation. Writes the "
             "Conversation, creates the Topic if missing, links it, writes each "
             "structured item (facts, decisions, todos, open questions, memories, "

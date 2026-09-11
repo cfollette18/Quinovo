@@ -260,6 +260,12 @@ def save_turn(
         "memory": "memory_about_entity",
     }
     index = EntityIndex(kernel)
+    if index.enabled:
+        # Subjects first, so a fact whose value names a later subject still links its object.
+        for item in inputs["fact"]:
+            subject = str(item.get("subject") or "")
+            if subject:
+                index.ensure(subject, topic_id=topic_id, actor=actor)
     for kind, items in inputs.items():
         in_topic_link, conv_link, out_key, otype, project_link = link_specs[kind]
         primary, secondary = type_props[kind]
