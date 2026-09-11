@@ -324,17 +324,22 @@ def recall(
             title = _title_of(kernel, obj).lower()
             score = 0.0
             if q_lower and q_lower in low:
-                score += 3.0
+                score += 2.0
             if q_lower and q_lower in title:
-                score += 3.0
+                score += 4.0
             text_tokens = set(_tokens(low))
             hits = sum(1 for tok in q_tokens if tok in text_tokens)
             if hits:
                 score += 2.0 * hits / max(1, len(q_tokens))
             if not score:
                 continue
-            if obj.object_type in {"Entity", "Fact", "Decision", "Memory"}:
+            # The things themselves outrank the turns that talked about them.
+            if obj.object_type in {"Entity", "Topic"}:
+                score += 1.0
+            elif obj.object_type in {"Fact", "Decision", "Memory"}:
                 score += 0.5
+            elif obj.object_type == "Conversation":
+                score -= 0.5
             score += min(graph.degree(obj.object_type, obj.id), 20) / 40.0
             scored.append((score, obj))
     scored.sort(key=lambda item: _recorded_at(item[1]), reverse=True)
@@ -394,7 +399,8 @@ def _entity_view(kernel: Any, graph: _Graph, entity: Any, limit: int) -> dict[st
     }
 
 
-def _topic_side(kernel: Any, graph: _Graph, topic_id: str, from_type: str) -> list[Any]:
+def _topic_side(kernel: Any, graph: _Graph, topic_ids: list[str], from_type: str) -> list[Any]:
+    """Objects of one type filed in any of these topics (a topic plus its subtopics)."""
     link_type = ""
     for spec in kernel.ontology.link_types:
         if spec.from_type == from_type and spec.to_type == "Topic":
@@ -402,18 +408,26 @@ def _topic_side(kernel: Any, graph: _Graph, topic_id: str, from_type: str) -> li
             break
     if not link_type:
         return []
-    return graph.neighbors("Topic", topic_id, link_type, outgoing=False)
+    found: list[Any] = []
+    seen: set[str] = set()
+    for topic_id in topic_ids:
+        for obj in graph.neighbors("Topic", topic_id, link_type, outgoing=False):
+            if obj.id not in seen:
+                seen.add(obj.id)
+                found.append(obj)
+    return found
 
 
 def _topic_view(kernel: Any, graph: _Graph, topic: Any, limit: int) -> dict[str, Any]:
     props = _props(topic)
-    todos = _topic_side(kernel, graph, topic.id, "Todo")
-    questions = _topic_side(kernel, graph, topic.id, "OpenQuestion")
-    decisions = _topic_side(kernel, graph, topic.id, "Decision")
-    memories = _topic_side(kernel, graph, topic.id, "Memory")
-    facts = _topic_side(kernel, graph, topic.id, "Fact")
-    conversations = _topic_side(kernel, graph, topic.id, "Conversation")
-    entities = _topic_side(kernel, graph, topic.id, "Entity")
+    scope = [topic.id, *sorted(topic_descendants(kernel, topic.id))]
+    todos = _topic_side(kernel, graph, scope, "Todo")
+    questions = _topic_side(kernel, graph, scope, "OpenQuestion")
+    decisions = _topic_side(kernel, graph, scope, "Decision")
+    memories = _topic_side(kernel, graph, scope, "Memory")
+    facts = _topic_side(kernel, graph, scope, "Fact")
+    conversations = _topic_side(kernel, graph, scope, "Conversation")
+    entities = _topic_side(kernel, graph, scope, "Entity")
     entities.sort(key=lambda e: -graph.degree("Entity", e.id))
     children = graph.neighbors("Topic", topic.id, "subtopic_of", outgoing=False)
     parents = graph.neighbors("Topic", topic.id, "subtopic_of", outgoing=True)
@@ -425,6 +439,7 @@ def _topic_view(kernel: Any, graph: _Graph, topic: Any, limit: int) -> dict[str,
         "status": str(props.get("status") or "active"),
         "parent": parents[0].id if parents else "",
         "subtopics": [c.id for c in children],
+        "includes_subtopics": scope[1:],
         "entities": [describe(kernel, e) for e in entities[:limit]],
         "open_todos": [
             _hit(kernel, graph, t) for t in _by_recency([t for t in todos if _is_open(t)])[:limit]

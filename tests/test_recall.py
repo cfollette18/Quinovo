@@ -50,7 +50,9 @@ def test_recall_ranks_matching_objects_as_lines(tmp_path):
     assert "Quinovo traces with Langfuse" in lines
     assert any(line.startswith("Decided: Keep Langfuse self-hosted.") for line in lines)
     assert all({"type", "id", "line", "topic"} <= set(hit) for hit in result["hits"])
-    assert result["hits"][0]["type"] in {"Entity", "Fact"}
+    assert result["hits"][0]["type"] == "Entity"
+    topic_first = kernel.recall("cretex technology")
+    assert topic_first["hits"][0]["type"] == "Topic"
 
 
 def test_recall_scopes_to_topic_and_types(tmp_path):
@@ -94,6 +96,10 @@ def test_about_topic_and_unknown_name(tmp_path):
     assert topic["parent"] == "cretex"
     assert topic["open_questions"][0]["line"] == "Question (open): Who owns Epicor licensing?"
     assert "Epicor hosts the ERP for Cretex" in topic["facts"]
+    parent = kernel.about("cretex")
+    assert "technology" in parent["includes_subtopics"]
+    assert "Epicor hosts the ERP for Cretex" in parent["facts"]
+    assert parent["counts"]["open_questions"] == 1
     missing = kernel.about("nothing-like-this")
     assert missing["kind"] == "none"
     assert missing["suggestions"] == []
