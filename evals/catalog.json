@@ -1,7 +1,7 @@
 {
   "name": "quinovo-eval-templates",
   "version": "0.1.0",
-  "description": "LLM judges for Quinovo MCP agents: one failure mode each, attach to the run.",
+  "description": "LLM judges for Quinovo: agent contract plus inference HITL. One failure mode each.",
   "companion": "https://github.com/cfollette18/agent-eval-templates",
   "categories": [
     {
@@ -28,6 +28,11 @@
       "id": "epistemics",
       "description": "Did claims about the twin come from Quinovo reads?",
       "rule": "rules/epistemics.json"
+    },
+    {
+      "id": "inference",
+      "description": "Did the loop park HITL that actually needs a human?",
+      "rule": "rules/inference.json"
     }
   ],
   "templates": [
@@ -65,6 +70,17 @@
       "id": "twin_first",
       "category": "epistemics",
       "path": "templates/epistemics/twin_first/template.json"
+    },
+    {
+      "id": "hitl_worthy",
+      "category": "inference",
+      "path": "templates/inference/hitl_worthy/template.json"
+    }
+  ],
+  "datasets": [
+    {
+      "id": "agent_run",
+      "path": "datasets/agent_run/template.json"
     }
   ]
 }

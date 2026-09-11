@@ -8,6 +8,7 @@ from typing import Any
 from quinovo.actions.apply import ActionError
 from quinovo.engine.payloads import proposal_payload
 from quinovo.llm.author import author_from_index
+from quinovo.llm.eval_dataset import collect_eval_failures
 from quinovo.topics import organize_topics
 
 logger = logging.getLogger(__name__)
@@ -116,6 +117,7 @@ def tick(
     pending_proposals = [
         proposal_payload(item) for item in kernel.store.list_proposals("pending")
     ]
+    eval_dataset = collect_eval_failures()
     return {
         "facts": facts,
         "applied": applied,
@@ -129,4 +131,5 @@ def tick(
         "sources_pulled": pulled,
         "logic_ran": logic_ran,
         "topics_created": topics.get("created") or [],
+        "eval_dataset": eval_dataset,
     }

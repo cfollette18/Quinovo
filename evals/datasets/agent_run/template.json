@@ -1,0 +1,98 @@
+{
+  "id": "agent_run",
+  "name": "quinovo/eval-failures",
+  "rule_name": "quinovo/eval-failures",
+  "evaluator_name_prefix": "quinovo/",
+  "description": "Quinovo agent runs that failed a catalog judge. Input is the run the judge saw. Expected output is the passing contract, so experiments re-score the same cases with the same templates.",
+  "metadata": {
+    "author": "quinovo",
+    "type": "eval-failures",
+    "source": "eval-templates"
+  },
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "user_input": {},
+      "output": {},
+      "tool_calls": {}
+    },
+    "required": ["user_input", "output", "tool_calls"]
+  },
+  "expected_output_schema": {
+    "type": "object",
+    "properties": {
+      "save_turn_called": {"type": "boolean"},
+      "structured_capture": {
+        "type": "string",
+        "enum": ["complete", "partial", "skipped", "none_needed", "unknown"]
+      },
+      "mcp_bypass": {"type": "boolean"},
+      "propose_not_author": {"type": "boolean"},
+      "hitl_respected": {"type": "boolean"},
+      "named_action": {"type": "boolean"},
+      "twin_first": {"type": "boolean"}
+    },
+    "required": [
+      "save_turn_called",
+      "structured_capture",
+      "mcp_bypass",
+      "propose_not_author",
+      "hitl_respected",
+      "named_action",
+      "twin_first"
+    ]
+  },
+  "expected_output": {
+    "save_turn_called": true,
+    "structured_capture": "complete",
+    "mcp_bypass": false,
+    "propose_not_author": true,
+    "hitl_respected": true,
+    "named_action": true,
+    "twin_first": true
+  },
+  "triggers": [
+    {
+      "template": "save_turn_called",
+      "score": "save_turn_called",
+      "data_type": "BOOLEAN",
+      "fail_when": {"equals": false}
+    },
+    {
+      "template": "structured_capture",
+      "score": "structured_capture",
+      "data_type": "CATEGORICAL",
+      "fail_when": {"in": ["partial", "skipped"]}
+    },
+    {
+      "template": "mcp_bypass",
+      "score": "mcp_bypass",
+      "data_type": "BOOLEAN",
+      "fail_when": {"equals": true}
+    },
+    {
+      "template": "propose_not_author",
+      "score": "propose_not_author",
+      "data_type": "BOOLEAN",
+      "fail_when": {"equals": false}
+    },
+    {
+      "template": "hitl_respected",
+      "score": "hitl_respected",
+      "data_type": "BOOLEAN",
+      "fail_when": {"equals": false}
+    },
+    {
+      "template": "named_action",
+      "score": "named_action",
+      "data_type": "BOOLEAN",
+      "fail_when": {"equals": false}
+    },
+    {
+      "template": "twin_first",
+      "score": "twin_first",
+      "data_type": "BOOLEAN",
+      "fail_when": {"equals": false}
+    }
+  ]
+}

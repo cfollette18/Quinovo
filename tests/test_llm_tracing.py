@@ -139,6 +139,7 @@ def test_status_payload_includes_tracing_without_keys():
     assert "enabled" in payload["tracing"]
     assert "environment" in payload["tracing"]
     assert payload["tracing"]["disagreement_dataset"]
+    assert payload["tracing"]["eval_dataset"]
     assert "LANGFUSE" not in str(payload)
     assert "sk-lf-" not in str(payload)
     assert "pk-lf-" not in str(payload)

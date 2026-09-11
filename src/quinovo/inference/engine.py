@@ -6,6 +6,7 @@ from typing import Any
 
 from quinovo.engine.store import InferredFact, ObjectStore, StoredObject
 from quinovo.inference.rules import InferenceRule, InferenceRuleset
+from quinovo.llm.tracing import pack_context, trace_pending_hitl
 from quinovo.policy import requires_hitl
 
 
@@ -297,4 +298,29 @@ def _commit_fact(
         },
         status,
     )
+    if status == "pending":
+        trace_pending_hitl(
+            source="inferred_fact",
+            source_id=fact.id,
+            item={
+                "source": "inferred_fact",
+                "id": fact.id,
+                "kind": "inferred_fact",
+                "title": f"{predicate} on {obj.object_type}:{obj.id}",
+                "why": provenance_detail or {},
+                "what": value,
+                "confidence": confidence,
+                "payload": {
+                    "object_type": obj.object_type,
+                    "object_id": obj.id,
+                    "predicate": predicate,
+                    "value": value,
+                    "rule": rule,
+                    "provenance": provenance,
+                    "provenance_detail": provenance_detail,
+                },
+                "actor": "quinovo-reasoner",
+                "pack_context": pack_context(store),
+            },
+        )
     return fact

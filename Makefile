@@ -1,4 +1,4 @@
-.PHONY: dev test install assets lint hooks
+.PHONY: dev test install assets lint hooks evals
 
 install:
 	uv sync --all-extras
@@ -17,3 +17,6 @@ assets:
 
 hooks:
 	install -m 0755 scripts/githooks/commit-msg .git/hooks/commit-msg
+
+evals:
+	./evals/install.sh

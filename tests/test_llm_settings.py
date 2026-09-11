@@ -59,6 +59,7 @@ def test_settings_page_hides_key_and_imports_hermes(client, tmp_path, monkeypatc
     assert "enabled" in payload["tracing"]
     assert "environment" in payload["tracing"]
     assert payload["tracing"]["disagreement_dataset"]
+    assert payload["tracing"]["eval_dataset"]
 
 
 def test_import_from_hermes_form(client, tmp_path, monkeypatch):

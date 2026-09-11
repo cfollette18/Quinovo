@@ -183,6 +183,53 @@ def trace_operation(
         yield span
 
 
+def pack_context(store: Any) -> dict[str, Any]:
+    """Named actions and the auto-apply bar, for the HITL-worthiness judge."""
+    ontology = getattr(store, "ontology", None)
+    if ontology is None:
+        return {}
+    spec = getattr(ontology, "ontology", None)
+    threshold = getattr(spec, "auto_apply_min_confidence", None)
+    actions = []
+    for action in getattr(ontology, "action_types", []) or []:
+        actions.append(
+            {
+                "api_name": action.api_name,
+                "unattended": action.unattended,
+                "approval_required": action.approval_required,
+            }
+        )
+    context: dict[str, Any] = {"actions": actions}
+    if threshold is not None:
+        context["auto_apply_min_confidence"] = threshold
+    return context
+
+
+def trace_pending_hitl(
+    *,
+    source: str,
+    source_id: int,
+    item: dict[str, Any],
+) -> None:
+    """Root observation for one parked HITL item. Failures never block the park."""
+    try:
+        if not tracing_enabled():
+            return
+        with trace_operation(
+            "pending_hitl",
+            trace_input=item,
+            tags=["hitl", "inference"],
+        ) as span:
+            if span is not None:
+                updater = getattr(span, "update", None)
+                if callable(updater):
+                    updater(output={"status": "pending", "hitl": True, "source": source})
+            remember_source_trace(source, source_id, last_trace_id())
+        flush_langfuse()
+    except Exception:
+        return
+
+
 def observe_generation(
     *,
     name: str,

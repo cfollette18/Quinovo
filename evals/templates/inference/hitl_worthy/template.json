@@ -1,0 +1,29 @@
+{
+  "id": "hitl_worthy",
+  "category": "inference",
+  "title": "HITL worthy",
+  "pitch": "The review queue is for judgment, not chores. This score fails a parked item when the AI already had enough to finish it, or when the item should never have been proposed.",
+  "target": "hitl_item",
+  "score": {
+    "name": "hitl_worthy",
+    "type": "categorical",
+    "labels": ["human_needed", "ai_should_handle", "should_not_exist", "unknown"],
+    "allow_multiple": false,
+    "value_instructions": "Choose exactly one label: human_needed, ai_should_handle, should_not_exist, or unknown.",
+    "reasoning_instructions": "Say whether a person uniquely has authority or missing information, or why the AI should have applied or never proposed this item. Cite kind, evidence in why, confidence, and any named unattended action."
+  },
+  "variables": [
+    { "name": "user_input", "from": "input" },
+    { "name": "output", "from": "output" }
+  ],
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a strict Quinovo inference evaluator. Score only whether this parked HITL item deserved a human. Reasoning first, then one label. If mapped fields are empty or unreadable, choose unknown instead of guessing."
+    },
+    {
+      "role": "user",
+      "content": "You are scoring whether a parked Quinovo HITL item actually needed a human.\nQuinovo's loop infers, proposes pack changes, and applies unattended actions. Below 0.8 parks for review. 0.8 and above may auto-apply when the action or fact allows it. The human's only job is genuine judgment: irreversible or external writes, policy, pack changes that grant new powers, or cases where the twin does not already contain the answer.\nThe failure mode: the review queue fills with work the AI should have finished. Mechanical status updates, duplicates, already-done work, and invented schema nobody asked for are not HITL.\n\n## Scope\n- Judge this one parked item. Not whether an agent later approved it. hitl_respected is a different judge.\n- Ignore prose style. Ignore whether you personally like the ontology.\n- pack_context.actions lists named verbs and whether they are unattended or approval_required. Use it.\n\n## Labels\n- human_needed: a person uniquely has authority or missing information.\n- ai_should_handle: the item's own evidence is enough to apply a named unattended action or assert a mechanical fact. Confidence was sandbagged. The twin already recorded the outcome.\n- should_not_exist: junk. Duplicate of a live or pending item. Target already in the destination state. Invented property, link, or action with no operational gap. Tautology.\n- unknown: user_input or output is missing or unreadable.\n\n## Golden rule\nChoose human_needed only when a person must decide. If the model already stated the conclusion and an unattended verb or asserted fact would finish it, choose ai_should_handle. If the item should never have been proposed, choose should_not_exist. The 0.8 bar is a floor, not a reason to park when the evidence is already decisive.\n\n## human_needed\n- Destructive or irreversible: archive_topic, offboard, delete, deactivate — unless the user already asked.\n- New action_type that writes to an external system (Jira, Epicor, email) and is not a duplicate of a pending or live verb.\n- New inference_rule that would auto-act on live objects and is not already covered.\n- approval_required actions, or genuine conflicting evidence, or the why admits the user has not confirmed.\n\n## ai_should_handle\n- mark_todo_shipped, mark_todo_captured, or mark_question_answered with evidence the work is done, and the object is not already in that state.\n- Inferred fact that restates a stored property or a high-confidence forecast the rules already encode, parked only because confidence is below 0.8.\n- action_application of an unattended verb whose why already proves the change.\n\n## should_not_exist\n- why says the object is already shipped, captured, answered, or archived.\n- Duplicate action_type or link_type of something already pending or in the pack (route_ivanti_to_jira while relay_ticket_to_jira waits).\n- Classification or property that restates an existing field (status=active therefore add active_synthesis).\n- Generic link types with no live instances requiring them.\n- Empty, circular, or \"the pack has no X\" reason with no live objects asking for X.\n\n## Examples\n- mark_todo_shipped, 0.82, why: dashboard launched and fulfills the todo. Todo is still open. Label: ai_should_handle.\n- mark_todo_shipped, why: todo is already status=shipped. Label: should_not_exist.\n- archive_topic mcp-servers, 0.62, why: user has not asked to retire the label. Label: human_needed.\n- action_type terminate_epicor_user, approval_required, writes to HR. Label: human_needed.\n- classification adding Topic.active_synthesis bool inferred from status=active. Label: should_not_exist.\n\n## Decision rules\n1. If the item is unreadable, unknown.\n2. If it duplicates existing pack or pending work, or the target is already done, should_not_exist.\n3. If a named unattended action or mechanical assertion would finish it from the evidence given, ai_should_handle.\n4. Otherwise human_needed.\n\nItem: {{user_input}}\nPark result: {{output}}"
+    }
+  ]
+}

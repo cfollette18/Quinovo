@@ -7,12 +7,44 @@ from pydantic import ValidationError
 from quinovo.actions.dispatch import DispatchError, dispatch
 from quinovo.engine.store import AuditRow, ObjectStore, StoredObject
 from quinovo.language.models import ActionParameterDef, ObjectRef
+from quinovo.llm.tracing import pack_context, trace_pending_hitl
 from quinovo.policy import ActionChannel, PolicyError, asserted_recommendation
 from quinovo.security import Guard, SecurityError
 
 
 class ActionError(Exception):
     """Action rejected: unknown type, bad params, missing object, or policy."""
+
+
+def _trace_parked_action(
+    store: ObjectStore,
+    pending_id: int,
+    action_type: str,
+    actor: str,
+    parameters: dict[str, Any],
+    spec: Any,
+) -> None:
+    trace_pending_hitl(
+        source="pending_action",
+        source_id=pending_id,
+        item={
+            "source": "pending_action",
+            "id": pending_id,
+            "kind": "pending_action",
+            "title": action_type,
+            "why": "",
+            "what": parameters,
+            "confidence": None,
+            "payload": {
+                "action_type": action_type,
+                "parameters": parameters,
+                "unattended": spec.unattended,
+                "approval_required": spec.approval_required,
+            },
+            "actor": actor,
+            "pack_context": pack_context(store),
+        },
+    )
 
 
 def _coerce_scalar(param: ActionParameterDef, raw: Any) -> Any:
@@ -89,6 +121,7 @@ def apply_action(
         audit = store.append_audit(
             action_type, actor, {**recorded, "pending_id": pending_id}, "pending_approval"
         )
+        _trace_parked_action(store, pending_id, action_type, actor, parameters, spec)
         return [], audit
 
     match channel:
@@ -111,6 +144,7 @@ def apply_action(
                         {**recorded, "pending_id": pending_id},
                         "pending_approval",
                     )
+                    _trace_parked_action(store, pending_id, action_type, actor, parameters, spec)
                     return [], audit
         case _ as unreachable:
             raise TypeError(f"unhandled action channel: {unreachable}")

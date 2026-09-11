@@ -16,4 +16,5 @@ export EVAL_BASE_URL="${EVAL_BASE_URL:-${LANGFUSE_BASE_URL:-http://localhost:300
 export EVAL_PROVIDER="${EVAL_PROVIDER:-MiniMax}"
 export EVAL_MODEL="${EVAL_MODEL:-MiniMax-M3}"
 export EVAL_NAME_PREFIX="${EVAL_NAME_PREFIX:-quinovo/}"
-exec python3 "$TEMPLATES/scripts/install.py" --rule --tag quinovo "$@"
+python3 "$TEMPLATES/scripts/install.py" --rule --tag quinovo "$@"
+python3 "$ROOT/evals/install_dataset.py" --collect

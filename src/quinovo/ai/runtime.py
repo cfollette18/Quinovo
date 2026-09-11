@@ -5,6 +5,7 @@ from typing import Any, Protocol
 
 from quinovo.engine.store import Forecast, ObjectStore, Proposal, StoredObject
 from quinovo.language.models import PROPOSAL_KINDS, ProposalKind
+from quinovo.llm.tracing import pack_context, trace_pending_hitl
 from quinovo.pack.authoring import PackCreateError, apply_kind
 from quinovo.policy import ActionChannel, requires_hitl
 
@@ -35,6 +36,26 @@ def _as_kind(kind: str) -> ProposalKind:
     if kind in PROPOSAL_KINDS:
         return kind  # type: ignore[return-value]
     raise ProposalError(f"unknown proposal kind {kind!r}")
+
+
+def _trace_parked_proposal(kernel: ProposalKernel, proposal: Proposal) -> None:
+    payload = proposal.payload or {}
+    trace_pending_hitl(
+        source="proposal",
+        source_id=proposal.id,
+        item={
+            "source": "proposal",
+            "id": proposal.id,
+            "kind": proposal.kind,
+            "title": payload.get("api_name") or payload.get("action_type") or proposal.kind,
+            "why": payload.get("reason") or "",
+            "what": payload.get("description") or "",
+            "confidence": proposal.confidence,
+            "payload": payload,
+            "actor": proposal.actor,
+            "pack_context": pack_context(kernel.store),
+        },
+    )
 
 
 def _execute(
@@ -76,6 +97,7 @@ def submit_proposal(
             {"kind": resolved, "confidence": confidence, "proposal_id": proposal.id},
             "pending_hitl",
         )
+        _trace_parked_proposal(kernel, proposal)
         return proposal, []
 
     edited = _execute(kernel, resolved, payload)
@@ -122,6 +144,7 @@ def _submit_action_application(
             {"kind": "action_application", "action_type": action_type, "proposal_id": proposal.id},
             "pending_hitl",
         )
+        _trace_parked_proposal(kernel, proposal)
         return proposal, []
     # The action's own policy is sovereign: only actions the loop could auto-apply
     # (unattended, or mcp_requires_recommendation) are auto-applied at >=0.8.
@@ -141,6 +164,7 @@ def _submit_action_application(
             {"kind": "action_application", "action_type": action_type, "proposal_id": proposal.id},
             "pending_hitl",
         )
+        _trace_parked_proposal(kernel, proposal)
         return proposal, []
     try:
         result = kernel.apply_action(action_type, parameters, actor, channel="mcp", already_approved=True)
@@ -154,6 +178,7 @@ def _submit_action_application(
             {"kind": "action_application", "action_type": action_type, "proposal_id": proposal.id},
             "pending_hitl",
         )
+        _trace_parked_proposal(kernel, proposal)
         return proposal, []
     proposal = kernel.store.insert_proposal(
         "action_application", payload, confidence, actor, "auto_applied"

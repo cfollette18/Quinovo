@@ -7,6 +7,7 @@ from typing import Any
 import httpx
 
 from quinovo.llm.disagreement import disagreement_dataset_name
+from quinovo.llm.eval_dataset import eval_dataset_name
 from quinovo.llm.settings import LLMSettings, ensure_settings, load_settings
 from quinovo.llm.tracing import (
     observe_generation,
@@ -123,5 +124,6 @@ def status_payload(settings: LLMSettings | None = None) -> dict[str, Any]:
         "enabled": tracing_enabled(),
         "environment": tracing_environment(),
         "disagreement_dataset": disagreement_dataset_name(),
+        "eval_dataset": eval_dataset_name(),
     }
     return public

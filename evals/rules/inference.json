@@ -1,0 +1,14 @@
+{
+  "id": "inference",
+  "name": "inference",
+  "sampling": 1,
+  "attach_to": "hitl_item",
+  "filter": [
+    {
+      "type": "stringOptions",
+      "column": "name",
+      "operator": "any of",
+      "value": ["pending_hitl"]
+    }
+  ]
+}
