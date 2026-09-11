@@ -10,6 +10,68 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
+from quinovo.entities import EntityIndex, clean_name, is_generic
+
+
+def _about_names(raw: Any) -> list[str]:
+    if isinstance(raw, str):
+        raw = [raw]
+    if not isinstance(raw, list):
+        return []
+    names = [clean_name(item) for item in raw]
+    return [name for name in names if name and not is_generic(name)][:6]
+
+
+def _link_about_entities(
+    kernel: Any,
+    index: EntityIndex,
+    link_type: str,
+    from_id: str,
+    names: list[str],
+    topic_id: str,
+    actor: str,
+) -> None:
+    try:
+        kernel.ontology.link_type(link_type)
+    except KeyError:
+        return
+    for name in names:
+        entity_id = index.ensure(name, topic_id=topic_id, actor=actor)
+        if entity_id is None:
+            continue
+        try:
+            kernel.set_link(link_type, from_id, entity_id, actor=actor)
+        except (KeyError, ValueError, PermissionError):
+            continue
+
+
+def link_fact_entities(
+    kernel: Any,
+    fact_id: str,
+    subject: str,
+    value: str,
+    topic_id: str,
+    actor: str,
+    index: EntityIndex | None = None,
+) -> None:
+    """Attach a Fact to its subject Entity (created if new) and object Entity (if known)."""
+    index = index or EntityIndex(kernel)
+    if not index.enabled:
+        return
+    pairs: list[tuple[str, str | None]] = []
+    if subject:
+        pairs.append(("fact_subject", index.ensure(subject, topic_id=topic_id, actor=actor)))
+    if value:
+        pairs.append(("fact_object", index.resolve(value)))
+    for link_type, entity_id in pairs:
+        if entity_id is None:
+            continue
+        try:
+            kernel.ontology.link_type(link_type)
+            kernel.set_link(link_type, fact_id, entity_id, actor=actor)
+        except (KeyError, ValueError, PermissionError):
+            continue
+
 
 def _as_list(value: Any) -> list[dict[str, Any]]:
     if value is None or value == "" or value == []:
@@ -191,10 +253,23 @@ def save_turn(
         "memory": _as_list(memories),
         "skill": _as_list(skills),
     }
+    entity_links = {
+        "todo": "todo_about_entity",
+        "decision": "decision_about_entity",
+        "question": "question_about_entity",
+        "memory": "memory_about_entity",
+    }
+    index = EntityIndex(kernel)
     for kind, items in inputs.items():
         in_topic_link, conv_link, out_key, otype, project_link = link_specs[kind]
         primary, secondary = type_props[kind]
         for item in items:
+            item = dict(item)
+            about = _about_names(item.pop("about", None))
+            if otype == "Fact" and "object" in item and "value" not in item:
+                item["value"] = item.pop("object")
+            elif "object" in item:
+                item.pop("object")
             if "id" not in item or not item.get("id"):
                 item["id"] = f"{kind}_{conv_id}_{len(written[out_key]) + 1}"
             item.setdefault("recorded_at", recorded_at)
@@ -210,6 +285,20 @@ def save_turn(
             kernel.set_link(conv_link, conv_id, item["id"], actor=actor)
             if project_id and project_link:
                 kernel.set_link(project_link, item["id"], project_id, actor=actor)
+            if otype == "Fact" and index.enabled:
+                link_fact_entities(
+                    kernel,
+                    item["id"],
+                    str(item.get("subject") or ""),
+                    str(item.get("value") or ""),
+                    topic_id,
+                    actor,
+                    index=index,
+                )
+            if about and index.enabled and kind in entity_links:
+                _link_about_entities(
+                    kernel, index, entity_links[kind], item["id"], about, topic_id, actor
+                )
             written[out_key].append(item["id"])
 
     kernel.nudge()

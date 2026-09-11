@@ -62,6 +62,7 @@ from quinovo.pack.authoring import PackCreateError, create_pack, read_pack, writ
 from quinovo.pack.validate import validate_pack
 from quinovo.policy import ActionChannel
 from quinovo.security import Guard, load_security, seed_tuples
+from quinovo.semantic import remember_text
 from quinovo.topics import catalog_topics
 from quinovo.topics import create_topic as run_create_topic
 from quinovo.topics import delete_topic as run_delete_topic
@@ -586,12 +587,17 @@ class Kernel:
     def _ensure_capture_sources(self) -> None:
         """Register the transcript ingest source so tick captures every agent chat.
 
-        Only the live world pack gets this source. Copied packs in tests stay clean.
+        Only the live world pack backed by a database under .data gets this
+        source. Temporary databases (tests, scratch kernels) stay clean.
         """
         names = {item.api_name for item in self.ontology.object_types}
         if "Conversation" not in names or "Topic" not in names:
             return
         if self.pack_dir.resolve() != WORLD_PACK.resolve():
+            return
+        try:
+            self.store.db_path.resolve().relative_to(DEFAULT_DB.parent.resolve())
+        except ValueError:
             return
         home = str(Path.home())
         self.store.upsert_source(
@@ -662,8 +668,6 @@ class Kernel:
         actor: str = "mcp-agent",
     ) -> dict[str, Any]:
         """Capture raw text and enrich it in one call (see quinovo.semantic)."""
-        from quinovo.semantic import remember_text
-
         return remember_text(
             self, text, topic=topic, session_id=session_id, role=role, actor=actor
         )

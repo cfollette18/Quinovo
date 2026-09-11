@@ -9,6 +9,7 @@ from quinovo.actions.apply import ActionError
 from quinovo.engine.payloads import proposal_payload
 from quinovo.llm.author import author_from_index
 from quinovo.llm.eval_dataset import collect_eval_failures
+from quinovo.semantic import enrich_new_conversations
 from quinovo.topics import organize_topics
 
 logger = logging.getLogger(__name__)
@@ -56,14 +57,12 @@ def tick(
         logger.warning("topic organize failed: %s", exc)
         topics = {"created": [], "error": "topic organize failed"}
 
-    semantics: dict[str, Any] = {"conversations": 0, "facts": [], "memories": [], "persons": []}
+    semantics: dict[str, Any] = {"conversations": 0, "facts": [], "entities": []}
     try:
-        from quinovo.semantic import enrich_new_conversations
-
         semantics = enrich_new_conversations(kernel, actor)
     except Exception as exc:  # noqa: BLE001 — loop must not die on enrichment
         logger.warning("semantic enrichment failed: %s", exc)
-        semantics = {"conversations": 0, "facts": [], "memories": [], "persons": [],
+        semantics = {"conversations": 0, "facts": [], "entities": [],
                      "error": "semantic enrichment failed"}
 
     proposed, authoring = author_from_index(
