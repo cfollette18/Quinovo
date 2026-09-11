@@ -18,7 +18,14 @@ from quinovo.llm.settings import load_settings
 
 MIN_CLUSTER = 3
 MAX_NEW_PER_PASS = 20
+STATUSES = frozenset({"active", "dormant", "archived"})
 TOKEN_RE = re.compile(r"[a-z][a-z0-9]{3,}")
+
+
+class CatalogError(ValueError):
+    """Human-facing catalog write failure."""
+
+
 STOPWORDS = frozenset(
     ["about", "across", "action", "actions", "actual", "actually", "adding", "after", "again", "along", "already", "alright", "also", "another", "around", "asked", "available", "back", "been", "before", "better", "briefly", "building", "built", "call", "called", "change", "chat", "code", "copy", "create", "current", "currently", "data", "description", "doing", "down", "each", "edit", "every", "example", "exist", "explain", "file", "files", "find", "first", "flow", "follow", "found", "full", "fully", "here", "high", "home", "include", "instead", "into", "itself", "just", "keep", "know", "label", "like", "likely", "line", "list", "live", "local", "look", "looks", "loop", "made", "main", "making", "more", "most", "move", "must", "name", "named", "names", "need", "needed", "needs", "never", "nothing", "only", "over", "page", "plus", "rather", "read", "ready", "real", "return", "right", "same", "serve", "show", "similar", "simple", "some", "something", "source", "start", "state", "still", "such", "summary", "system", "systems", "than", "that", "them", "then", "there", "these", "they", "thing", "things", "this", "those", "through", "title", "under", "unless", "update", "using", "view", "want", "well", "were", "what", "when", "which", "while", "will", "with", "within", "work", "working", "would", "could", "should", "write", "your", "from", "have", "here", "into", "object", "objects", "topic", "topics", "item", "items", "user", "users", "test", "tests", "todo", "todos", "fact", "facts", "mentions", "quinovo", "cursor", "agent", "agents", "session", "turn", "turns", "true", "false", "none", "null", "status", "active", "open", "based", "notes", "talk", "talked"]
 )
@@ -160,6 +167,8 @@ def _topic_node(kernel: Any, obj: Any, children_map: dict[str, list[str]], by_id
         "name": str(props.get("name") or _title(obj.id)),
         "description": str(props.get("description") or ""),
         "status": str(props.get("status") or "active"),
+        "parent_id": topic_parent(kernel, obj.id) or "",
+        "protected": obj.id in PROTECTED_TOPICS,
         "counts": topic_counts(kernel, obj.id),
         "children": [
             _topic_node(kernel, by_id[child_id], children_map, by_id)
@@ -185,6 +194,158 @@ def catalog_topics(kernel: Any) -> list[dict[str, Any]]:
     roots = [obj for obj in objects if obj.id not in parents]
     roots.sort(key=lambda item: str((item.properties or {}).get("name") or item.id).lower())
     return [_topic_node(kernel, obj, children_map, by_id) for obj in roots]
+
+
+def topic_descendants(kernel: Any, topic_id: str) -> set[str]:
+    found: set[str] = set()
+    stack = list(topic_children(kernel, topic_id))
+    while stack:
+        child_id = stack.pop()
+        if child_id in found:
+            continue
+        found.add(child_id)
+        stack.extend(topic_children(kernel, child_id))
+    return found
+
+
+def set_topic_parent(kernel: Any, topic_id: str, parent_id: str, actor: str) -> None:
+    """Move a topic under parent_id, or to the root when parent_id is empty."""
+    wanted = parent_id.strip()
+    current = topic_parent(kernel, topic_id)
+    if wanted and wanted == topic_id:
+        raise CatalogError("A topic cannot sit inside itself.")
+    if wanted and wanted in topic_descendants(kernel, topic_id):
+        raise CatalogError("A topic cannot sit inside one of its own subtopics.")
+    if wanted and kernel.store.get_object("Topic", wanted) is None:
+        raise CatalogError("That parent topic is missing.")
+    if current == (wanted or None):
+        return
+    if current:
+        kernel.remove_link("subtopic_of", topic_id, current, actor=actor)
+    if wanted:
+        kernel.set_link("subtopic_of", topic_id, wanted, actor=actor)
+
+
+def _require_topic_type(kernel: Any) -> None:
+    if not has_topic_type(kernel):
+        raise CatalogError("This pack has no Topic kind.")
+
+
+def _require_topic(kernel: Any, topic_id: str) -> Any:
+    obj = kernel.store.get_object("Topic", topic_id)
+    if obj is None:
+        raise CatalogError("That topic is missing.")
+    return obj
+
+
+def create_topic(
+    kernel: Any,
+    *,
+    name: str,
+    description: str = "",
+    parent: str = "",
+    actor: str = "human",
+) -> dict[str, Any]:
+    """Create a Topic basket. Name is required; parent must already exist."""
+    _require_topic_type(kernel)
+    label = name.strip()
+    if not label:
+        raise CatalogError("Give the topic a name.")
+    segments = topic_path(label)
+    if not segments:
+        raise CatalogError("Give the topic a name.")
+    topic_id = segments[-1]
+    if kernel.store.get_object("Topic", topic_id) is not None:
+        raise CatalogError(f"A topic named {label} already exists.")
+    parent_id = parent.strip()
+    if parent_id and kernel.store.get_object("Topic", parent_id) is None:
+        raise CatalogError("That parent topic is missing.")
+    ensure_topic(
+        kernel,
+        topic_id,
+        description=description.strip(),
+        actor=actor,
+    )
+    obj = _require_topic(kernel, topic_id)
+    props = dict(obj.properties)
+    props["name"] = label
+    if description.strip():
+        props["description"] = description.strip()
+    kernel.upsert_object("Topic", props, actor=actor)
+    if parent_id:
+        set_topic_parent(kernel, topic_id, parent_id, actor)
+    return {"id": topic_id, "name": label}
+
+
+def update_topic(
+    kernel: Any,
+    topic_id: str,
+    *,
+    name: str | None = None,
+    description: str | None = None,
+    parent: str | None = None,
+    status: str | None = None,
+    actor: str = "human",
+) -> dict[str, Any]:
+    """Edit a Topic's label, description, parent, or status."""
+    _require_topic_type(kernel)
+    obj = _require_topic(kernel, topic_id)
+    props = dict(obj.properties)
+    if name is not None:
+        label = name.strip()
+        if not label:
+            raise CatalogError("Give the topic a name.")
+        props["name"] = label
+    if description is not None:
+        props["description"] = description.strip()
+    if status is not None:
+        value = status.strip().lower()
+        if value not in STATUSES:
+            raise CatalogError("Status must be active, dormant, or archived.")
+        current_status = str(props.get("status") or "active")
+        if value == "archived" and current_status != "archived":
+            try:
+                kernel.ontology.action_type("archive_topic")
+            except KeyError:
+                props["status"] = value
+            else:
+                kernel.apply_action(
+                    "archive_topic",
+                    {"topic": {"type": "Topic", "id": topic_id}},
+                    actor,
+                    channel="human",
+                )
+                obj = _require_topic(kernel, topic_id)
+                props = dict(obj.properties)
+                if name is not None:
+                    props["name"] = name.strip()
+                if description is not None:
+                    props["description"] = description.strip()
+        else:
+            props["status"] = value
+    kernel.upsert_object("Topic", props, actor=actor)
+    if parent is not None:
+        set_topic_parent(kernel, topic_id, parent, actor)
+    return {
+        "id": topic_id,
+        "name": str(props.get("name") or _title(topic_id)),
+        "status": str(props.get("status") or "active"),
+    }
+
+
+def delete_topic(kernel: Any, topic_id: str, *, actor: str = "human") -> dict[str, Any]:
+    """Remove a topic. Subtopics move to its parent (or become roots)."""
+    _require_topic_type(kernel)
+    if topic_id in PROTECTED_TOPICS:
+        raise CatalogError(
+            "This basket is part of the workspace, so it cannot be removed. Archive it instead."
+        )
+    _require_topic(kernel, topic_id)
+    parent_id = topic_parent(kernel, topic_id) or ""
+    for child_id in list(topic_children(kernel, topic_id)):
+        set_topic_parent(kernel, child_id, parent_id, actor)
+    kernel.delete_object("Topic", topic_id, actor=actor)
+    return {"deleted": topic_id}
 
 
 def _existing_ids(kernel: Any) -> set[str]:

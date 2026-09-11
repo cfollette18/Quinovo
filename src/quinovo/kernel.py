@@ -63,7 +63,10 @@ from quinovo.pack.validate import validate_pack
 from quinovo.policy import ActionChannel
 from quinovo.security import Guard, load_security, seed_tuples
 from quinovo.topics import catalog_topics
+from quinovo.topics import create_topic as run_create_topic
+from quinovo.topics import delete_topic as run_delete_topic
 from quinovo.topics import organize_topics as run_organize_topics
+from quinovo.topics import update_topic as run_update_topic
 from quinovo.train import (
     TrainError,
     create_job,
@@ -440,6 +443,40 @@ class Kernel:
         use_llm: bool = False,
     ) -> dict[str, Any]:
         return run_organize_topics(self, actor, use_llm=use_llm)
+
+    def create_topic(
+        self,
+        name: str,
+        description: str = "",
+        parent: str = "",
+        actor: str = "human",
+    ) -> dict[str, Any]:
+        return run_create_topic(
+            self, name=name, description=description, parent=parent, actor=actor
+        )
+
+    def update_topic(
+        self,
+        topic_id: str,
+        *,
+        name: str | None = None,
+        description: str | None = None,
+        parent: str | None = None,
+        status: str | None = None,
+        actor: str = "human",
+    ) -> dict[str, Any]:
+        return run_update_topic(
+            self,
+            topic_id,
+            name=name,
+            description=description,
+            parent=parent,
+            status=status,
+            actor=actor,
+        )
+
+    def delete_topic(self, topic_id: str, actor: str = "human") -> dict[str, Any]:
+        return run_delete_topic(self, topic_id, actor=actor)
 
     def inference_queue(self) -> dict[str, Any]:
         pending_actions = [
