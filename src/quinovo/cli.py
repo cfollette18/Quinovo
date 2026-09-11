@@ -14,6 +14,8 @@ from quinovo.llm.tracing import load_langfuse_env
 from quinovo.mcp.server import run_stdio
 from quinovo.pack.create import PackCreateError, create_pack_from_yaml
 from quinovo.pack.init import init_pack
+from quinovo.repair import plan as repair_plan
+from quinovo.repair import repair
 from quinovo.workspace import DEFAULT_DB, DEFAULT_PACK, resolve_serve_paths
 
 
@@ -75,6 +77,15 @@ def main() -> None:
     tick.add_argument("--db", type=Path, default=DEFAULT_DB)
     tick.add_argument("--actor", default="autonomous")
 
+    fix = sub.add_parser(
+        "repair",
+        help="back up the database, then remove noise left by earlier extractors and rules",
+    )
+    fix.add_argument("--pack", type=Path, default=DEFAULT_PACK)
+    fix.add_argument("--db", type=Path, default=DEFAULT_DB)
+    fix.add_argument("--dry-run", dest="dry_run", action="store_true")
+    fix.add_argument("--no-backup", dest="no_backup", action="store_true")
+
     train = sub.add_parser("train", help="save a filtered set and prepare a small specialist job")
     train.add_argument("--pack", type=Path, default=DEFAULT_PACK)
     train.add_argument("--db", type=Path, default=DEFAULT_DB)
@@ -131,6 +142,23 @@ def main() -> None:
                     f"  proposal {item['id']}  {item['kind']}  "
                     f"{payload.get('api_name', '')}  conf={item['confidence']}"
                 )
+        case "repair":
+            kernel = open_kernel(args.pack, args.db)
+            if args.dry_run:
+                todo = repair_plan(kernel)
+                print(
+                    f"would remove facts={len(todo['facts'])} memories={len(todo['memories'])} "
+                    f"persons={len(todo['persons'])} "
+                    f"inferred_facts={sum(todo['orphan_rules'].values())} "
+                    f"proposals={len(todo['proposals'])} "
+                    f"extra_topic_links={len(todo['extra_topic_links'])}; "
+                    f"reset conversations={todo['conversations']}"
+                )
+            else:
+                result = repair(kernel, backup=not args.no_backup)
+                removed = result["removed"]
+                print(f"backup={result['backup'] or 'none'}")
+                print(" ".join(f"{key}={value}" for key, value in removed.items()))
         case "train":
             kernel = open_kernel(args.pack, args.db)
             try:

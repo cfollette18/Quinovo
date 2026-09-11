@@ -1014,6 +1014,24 @@ class ObjectStore:
             rows = self._conn.execute(sql, params).fetchall()
         return [_inferred_from_row(r) for r in rows]
 
+    def list_inferred_rules(self) -> dict[str, int]:
+        """Rule name -> how many inferred facts it left behind."""
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT rule, COUNT(*) AS n FROM inferred_facts GROUP BY rule"
+            ).fetchall()
+        return {str(row["rule"]): int(row["n"]) for row in rows}
+
+    def delete_inferred_facts_by_rule(self, rule: str) -> int:
+        """Forget every fact a rule produced (used when the rule itself is gone)."""
+        with self._lock:
+            cursor = self._conn.execute("DELETE FROM inferred_facts WHERE rule = ?", (rule,))
+            self._conn.commit()
+            deleted = int(cursor.rowcount or 0)
+        if deleted:
+            self._note_index_change()
+        return deleted
+
     def set_inferred_fact_status(self, fact_id: int, status: str) -> InferredFact:
         with self._lock:
             self._conn.execute(
