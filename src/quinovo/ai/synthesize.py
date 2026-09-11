@@ -1,4 +1,10 @@
-"""Propose inference rules from the live index. Humans validate via HITL."""
+"""Propose inference rules from the live index. Humans validate via HITL.
+
+Heuristic proposals are pattern-spotting, not understanding, so they never
+reach the auto-apply threshold: the strongest heuristic parks at 0.75 and a
+human approves it. Only the language model (which reads the evidence) may
+propose at 0.8 and above.
+"""
 
 from __future__ import annotations
 
@@ -11,10 +17,42 @@ from quinovo.ai.runtime import ProposalKernel, submit_proposal
 from quinovo.engine.store import Proposal
 
 DEFAULT_SYNTH_CONFIDENCE = 0.55
-STRONG_SYNTH_CONFIDENCE = 0.85
+STRONG_SYNTH_CONFIDENCE = 0.75
 STRONG_N = 3
+MIN_PREFIX_SUPPORT = 3
 STATUS_LIKE = frozenset({"status", "state", "phase", "lifecycle"})
 _SLUG = re.compile(r"[^a-zA-Z0-9_]+")
+_NAMESPACE_PREFIX = re.compile(r"^([a-z][a-z]{2,}[:\-_])")
+_HEXISH = re.compile(r"^[0-9a-f]{6,}$")
+
+
+def informative(payload: dict[str, Any]) -> bool:
+    """False for rules that only restate a property or link as a fact."""
+    if payload.get("kind") != "property_fact":
+        return True
+    when = payload.get("when_property") or {}
+    then = payload.get("then_fact") or {}
+    same_predicate = str(then.get("predicate") or "") == str(when.get("api_name") or "")
+    same_value = str(then.get("value") or "") == str(when.get("equals") or "")
+    return not (same_predicate and same_value)
+
+
+def namespace_prefix(object_id: str, type_names: frozenset[str] = frozenset()) -> str | None:
+    """'principle:P1' -> 'principle:'; 'sem-4375ab' -> None (hash, not a namespace).
+
+    Ids that tag their own type ('fact_s:1_1' on a Fact) or embed a turn id
+    are capture bookkeeping, not a namespace anyone would write a rule about.
+    """
+    match = _NAMESPACE_PREFIX.match(object_id)
+    if not match:
+        return None
+    prefix = match.group(1)
+    rest = object_id[len(prefix) :]
+    if not rest or _HEXISH.match(rest.lower()) or ":" in rest:
+        return None
+    if prefix[:-1] in type_names:
+        return None
+    return prefix
 
 
 def _slug(*parts: str) -> str:
@@ -128,27 +166,8 @@ def candidate_rules(kernel: ProposalKernel) -> Iterator[tuple[float, dict[str, A
     ontology = kernel.store.ontology
     for type_def in ontology.object_types:
         objects = kernel.store.list_objects(type_def.api_name)
-        for prop_name in _status_props(type_def):
-            counts: Counter[str] = Counter()
-            for obj in objects:
-                raw = obj.properties.get(prop_name)
-                if raw is None or raw == "":
-                    continue
-                counts[str(raw)] += 1
-            for value, n in counts.items():
-                yield _confidence(n), {
-                    "api_name": _slug("synth_property", type_def.api_name, prop_name, value),
-                    "kind": "property_fact",
-                    "description": f"Observed {prop_name}={value} on {type_def.api_name}.",
-                    "reason": (
-                        f"{n} live {type_def.api_name} object(s) have {prop_name}={value}, "
-                        "so Quinovo wants a rule that records that as a fact."
-                    ),
-                    "source_type": type_def.api_name,
-                    "confidence": 0.9,
-                    "when_property": {"api_name": prop_name, "equals": value},
-                    "then_fact": {"predicate": prop_name, "value": value},
-                }
+        # Status-like properties are already facts; restating status=open as an
+        # inferred fact says nothing new, so no property_fact rules come from here.
 
         metrics: Counter[str] = Counter()
         for obj in objects:
@@ -172,15 +191,16 @@ def candidate_rules(kernel: ProposalKernel) -> Iterator[tuple[float, dict[str, A
             }
 
         sides = _outbound_sides(kernel, type_def.api_name)
+        linked = 0
         if len(sides) >= 2:
-            linked = 0
             for obj in objects:
                 if all(
                     kernel.store.search_around(type_def.api_name, obj.id, side)
                     for side in sides[:2]
                 ):
                     linked += 1
-            yield _confidence(max(linked, 1)), {
+        if len(sides) >= 2 and linked >= 1:
+            yield _confidence(linked), {
                 "api_name": _slug("synth_join", type_def.api_name),
                 "kind": "join_links",
                     "description": f"{type_def.api_name} with {', '.join(sides[:2])} is a complete story.",
@@ -194,7 +214,13 @@ def candidate_rules(kernel: ProposalKernel) -> Iterator[tuple[float, dict[str, A
                 "then_fact": {"predicate": "story", "value": "complete"},
             }
 
+        at_risk_evidence = bool(metrics) or any(
+            fact.predicate == "at_risk"
+            for fact in kernel.store.list_inferred_facts(type_def.api_name, None, status=None)
+        )
         for action in ontology.action_types:
+            if not at_risk_evidence:
+                break
             if action.approval_required:
                 continue
             if not action.unattended and not action.mcp_requires_recommendation:
@@ -221,17 +247,20 @@ def candidate_rules(kernel: ProposalKernel) -> Iterator[tuple[float, dict[str, A
                 }
 
     buckets: dict[tuple[str, str, str, str], Counter[str]] = defaultdict(Counter)
+    type_names = frozenset(item.api_name.lower() for item in ontology.object_types)
     for link in kernel.store.list_all_links():
         if link.from_type in {"Conversation", "Topic"}:
             continue
-        prefix_len = 8
-        if len(link.from_id) < prefix_len:
+        prefix = namespace_prefix(link.from_id, type_names)
+        if prefix is None:
             continue
-        prefix = link.from_id[:prefix_len]
         buckets[(link.link_type, link.from_type, prefix, link.to_type)][link.to_id] += 1
     for (link_type, from_type, prefix, to_type), counts in buckets.items():
         to_id, n = counts.most_common(1)[0]
-        if n < 2:
+        total = sum(counts.values())
+        if n < MIN_PREFIX_SUPPORT or n * 5 < total * 4:
+            # Needs real support and a clear majority; a namespace that fans out
+            # to many targets is not a rule, it is a coincidence.
             continue
         yield _confidence(n), {
             "api_name": _slug("synth_prefix", from_type, prefix, link_type),
@@ -252,15 +281,16 @@ def synthesize_and_propose(
     kernel: ProposalKernel,
     actor: str = "quinovo-synth",
 ) -> list[Proposal]:
-    """Park or auto-apply synthesized rules. Below 0.8 is HITL; 0.8+ writes YAML."""
+    """Park synthesized rules for HITL. Heuristics never reach the auto-apply threshold."""
     known = _known_fingerprints(kernel)
     submitted: list[Proposal] = []
     for confidence, payload in candidate_rules(kernel):
         try:
-            if _already_covered(known, payload):
+            if not informative(payload) or _already_covered(known, payload):
                 continue
         except (KeyError, TypeError, ValueError):
             continue
+        confidence = min(confidence, STRONG_SYNTH_CONFIDENCE)
         proposal, _edited = submit_proposal(kernel, "inference_rule", payload, confidence, actor)
         submitted.append(proposal)
         try:

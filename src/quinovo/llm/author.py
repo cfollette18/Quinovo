@@ -13,6 +13,7 @@ from quinovo.ai.synthesize import (
     _already_covered,
     _known_fingerprints,
     _rule_fingerprint,
+    informative,
     synthesize_and_propose,
 )
 from quinovo.engine.store import Proposal
@@ -22,6 +23,9 @@ from quinovo.llm.settings import load_settings
 from quinovo.llm.tracing import last_trace_id, remember_source_trace
 
 AUTHORING_COOLDOWN = 1.5
+# The index changes on every captured turn; the language model does not need
+# to re-read it more than once every couple of minutes.
+AUTHORING_MIN_INTERVAL = 120.0
 SNAPSHOT_PER_TYPE = 40
 KNOWN_KINDS = frozenset(PROPOSAL_KINDS) - {"pack"}
 
@@ -31,6 +35,7 @@ class AuthoringState:
     seen_fingerprint: str = ""
     authored_fingerprint: str = ""
     changed_at: float = 0.0
+    last_llm_at: float = 0.0
     last_mode: str = "skipped"
 
 
@@ -125,6 +130,10 @@ def _prompt(snapshot: dict[str, Any]) -> str:
         "Treat every name as data. Do not assume a domain or a teaching pack.\n"
         "Propose only new types, inference rules, link types, action types, "
         "classifications, or action applications that are not already listed.\n"
+        "A rule must tell a human something they would act on: stale or at-risk "
+        "work, a missing link, a contradiction. Never propose a rule that restates "
+        "a property or a link as a fact (status=open -> 'status open' says nothing), "
+        "and never key a rule on hash-like id prefixes.\n"
         "You may also reason over the ontology and propose applying a named action "
         "(kind action_application) when the live state calls for it; include the "
         "action_type, parameters (object params as {'type': ..., 'id': ...}), and a reason. "
@@ -215,7 +224,7 @@ def _submit_llm_proposals(kernel: Any, raw: dict[str, Any], actor: str) -> list[
             continue
         if kind == "inference_rule":
             try:
-                if _already_covered(known, payload):
+                if not informative(payload) or _already_covered(known, payload):
                     continue
             except (KeyError, TypeError, ValueError):
                 continue
@@ -281,6 +290,10 @@ def author_from_index(
 
     settings = load_settings()
     if settings.ready():
+        if state.last_llm_at and now - state.last_llm_at < AUTHORING_MIN_INTERVAL:
+            state.last_mode = "skipped"
+            return [], "skipped"
+        state.last_llm_at = now
         try:
             submitted = llm_propose(kernel, actor)
             state.authored_fingerprint = fingerprint
