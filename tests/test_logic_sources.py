@@ -30,7 +30,7 @@ def test_register_and_run_callable_logic(kernel):
     assert len(listed) == 1
     result = kernel.run_logic_source("risk-model")
     assert result["facts"]
-    fact = kernel.get_object("Package", "1Z999")["inferred"]
+    fact = kernel.get_object("Package", "1Z999")["facts"]
     predicates = {f["predicate"] for f in fact}
     assert "custom_risk" in predicates
 

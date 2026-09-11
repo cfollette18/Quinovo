@@ -162,20 +162,40 @@ class Kernel:
         property_name: str | None = None,
         equals: str | None = None,
         actor: str | None = None,
+        *,
+        contains: str | None = None,
+        limit: int | None = None,
     ) -> dict[str, Any]:
+        """Objects of one type; equals= exact match, contains= substring across text; limit= bounds."""
         found = self.store.filter_objects(object_type, property_name, equals)
         if actor is not None and self.policy is not None:
             found = [item for item in found if self.guard.can_read(actor, item)]
-        return {"objects": [object_payload(self.store, item) for item in found]}
+        if contains:
+            needle = contains.lower()
+            found = [
+                item
+                for item in found
+                if needle in item.id.lower()
+                or any(needle in str(v).lower() for v in item.properties.values())
+            ]
+        total = len(found)
+        if limit is not None:
+            found = found[: max(0, limit)]
+        return {"objects": [object_payload(self.store, item) for item in found], "total": total}
 
     def list_inferred_facts(
         self,
         object_type: str | None = None,
         id: str | None = None,
         status: str | None = "asserted",
+        *,
+        limit: int | None = None,
     ) -> dict[str, Any]:
         facts = self.store.list_inferred_facts(object_type, id, status=status)
-        return {"facts": [inferred_payload(item) for item in facts]}
+        total = len(facts)
+        if limit is not None:
+            facts = facts[-max(0, limit) :] if limit else []
+        return {"facts": [inferred_payload(item) for item in facts], "total": total}
 
     def explain_fact(self, fact_id: int) -> dict[str, Any]:
         fact = self.store.get_inferred_fact(fact_id)
@@ -540,8 +560,14 @@ class Kernel:
 
         return engine_from_settings()
 
-    def graph(self) -> dict[str, Any]:
-        return graph_payload(self.ontology, self.store)
+    def graph(
+        self,
+        *,
+        types: list[str] | None = None,
+        around: tuple[str, str] | None = None,
+        limit: int | None = None,
+    ) -> dict[str, Any]:
+        return graph_payload(self.ontology, self.store, types=types, around=around, limit=limit)
 
     def approve_inferred_fact(self, fact_id: int, actor: str) -> dict[str, Any]:
         fact = approve_inferred_fact(self.store, fact_id, actor, self.ruleset)
@@ -773,14 +799,38 @@ class Kernel:
             "to": f"{spec.to_type}:{to_id}",
         }
 
-    def list_links(self) -> dict[str, Any]:
-        return {"links": [link_payload(link) for link in self.store.list_all_links()]}
+    def list_links(
+        self,
+        *,
+        link_type: str | None = None,
+        from_id: str | None = None,
+        to_id: str | None = None,
+        limit: int | None = None,
+    ) -> dict[str, Any]:
+        """Named links, optionally narrowed by type or endpoint; limit= bounds the page."""
+        links = self.store.list_all_links()
+        if link_type:
+            links = [item for item in links if item.link_type == link_type]
+        if from_id:
+            links = [item for item in links if item.from_id == from_id]
+        if to_id:
+            links = [item for item in links if item.to_id == to_id]
+        total = len(links)
+        if limit is not None:
+            links = links[: max(0, limit)]
+        return {"links": [link_payload(link) for link in links], "total": total}
 
     def tick(self, actor: str = "autonomous", *, wait_for_quiet: bool = False) -> dict[str, Any]:
         return run_tick(self, actor, wait_for_quiet=wait_for_quiet)
 
-    def list_proposals(self, status: str | None = "pending") -> dict[str, Any]:
-        return {"proposals": [proposal_payload(item) for item in self.store.list_proposals(status)]}
+    def list_proposals(
+        self, status: str | None = "pending", *, limit: int | None = None
+    ) -> dict[str, Any]:
+        proposals = self.store.list_proposals(status)
+        total = len(proposals)
+        if limit is not None:
+            proposals = proposals[-max(0, limit) :] if limit else []
+        return {"proposals": [proposal_payload(item) for item in proposals], "total": total}
 
     # --- Data sources (connectors / MCP-as-connector) ------------------
 

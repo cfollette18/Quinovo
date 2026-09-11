@@ -45,9 +45,9 @@ quinovo init ./my-world
 quinovo init --from clinic ./my-clinic
 ```
 
-MCP tools are generated from the loaded pack: `remember`, `tick`, `save_turn`, `list_object_types`, `get_object`, `search_around`, `filter_objects`, `list_inferred_facts`, `run_inference`, `list_actions`, `apply_action`, `get_series`, `explain_fact`.
+MCP tools are generated from the loaded pack. An agent's session is three calls: `briefing` at the start (one page of what is live), `about(name)` or `recall(query)` before answering, and `save_turn` at the end with the turn's facts as subject–predicate–value triples, decisions, todos, questions, and memories. The rest — `get_object`, `search_around`, `filter_objects`, `list_inferred_facts`, `apply_action`, `propose_rule`, and so on — is paged and filterable.
 
-Quinovo ticks itself in the background — agents call `remember` at the end of every turn with raw text and never need to be told "quinovo tick".
+Quinovo ticks itself in the background — it pulls sources, extracts entities and triples from new turns with the configured model, infers, and applies unattended actions. Agents never need to be told "quinovo tick".
 
 The workspace rail includes **Train**: filter live things, connections, noticed facts, and changes into a named set, then prepare a **small specialist** job. That writes a JSONL file under `.data/train/` — it does not run a GPU trainer unless you point `QUINOVO_TRAIN_CMD` at one. The Settings language model stays a separate authoring path.
 

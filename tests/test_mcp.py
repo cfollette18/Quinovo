@@ -213,11 +213,44 @@ def test_mcp_propose_rule_is_hitl(tmp_path):
 def test_mcp_tick_returns_hitl_surface(tmp_path):
     kernel = open_kernel(db_path=tmp_path / "mcp.sqlite")
     body = _mcp(kernel, "tick")
-    assert "pending_proposals" in body
-    assert "pending_facts" in body
-    assert "pending_actions" in body
-    assert "sources_pulled" in body
-    assert "logic_ran" in body
+    assert set(body["waiting_on_human"]) == {"inferred_facts", "actions", "proposals"}
+    assert {"authoring", "inferred", "applied", "enriched_turns", "next_for_human"} <= set(body)
+    assert "pending_facts" not in body
+    full = _mcp(kernel, "tick", {"verbose": True})
+    assert "pending_proposals" in full
+    assert "pending_facts" in full
+    assert "pending_actions" in full
+    assert "sources_pulled" in full
+    assert "logic_ran" in full
+
+
+def test_mcp_list_tools_are_paged_and_report_totals(tmp_path):
+    kernel = open_kernel(db_path=tmp_path / "mcp.sqlite")
+    for i in range(6):
+        kernel.save_turn(
+            "s",
+            i,
+            "quinovo",
+            f"Turn {i} about Langfuse.",
+            facts=[{"subject": "Langfuse", "predicate": "seen_in", "value": f"turn {i}"}],
+            actor="test",
+        )
+    facts = _mcp(kernel, "filter_objects", {"object_type": "Fact", "limit": 2})
+    assert len(facts["objects"]) == 2 and facts["total"] == 6
+    assert "inferred" not in facts["objects"][0]
+    narrowed = _mcp(kernel, "filter_objects", {"object_type": "Fact", "contains": "turn 3"})
+    assert narrowed["total"] == 1
+    links = _mcp(kernel, "list_links", {"link_type": "fact_subject", "limit": 3})
+    assert len(links["links"]) == 3 and links["total"] == 6
+    everything = _mcp(kernel, "graph", {"limit": 4})
+    assert len(everything["nodes"]) == 4 and everything["total_nodes"] > 4
+    assert all(
+        edge["from"] in {n["id"] for n in everything["nodes"]} for edge in everything["edges"]
+    )
+    around = _mcp(kernel, "graph", {"around_type": "Entity", "around_id": "langfuse"})
+    ids = {n["id"] for n in around["nodes"]}
+    assert "Entity:langfuse" in ids and "Fact:fact_s:0_1" in ids
+    assert "Conversation:s:0" not in ids
 
 
 def test_mcp_register_and_pull_source(tmp_path):

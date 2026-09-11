@@ -12,6 +12,14 @@ from quinovo.capture import save_turn as capture_turn
 from quinovo.kernel import Kernel
 from quinovo.llm.tracing import load_langfuse_env
 from quinovo.loop.runner import start_autonomy
+from quinovo.loop.tick import tick_digest
+
+DEFAULT_PAGE = 50
+MAX_PAGE = 200
+
+
+def _page(limit: int) -> int:
+    return max(1, min(int(limit or DEFAULT_PAGE), MAX_PAGE))
 
 
 def create_mcp(kernel: Kernel) -> FastMCP:
@@ -27,30 +35,37 @@ def create_mcp(kernel: Kernel) -> FastMCP:
     mcp = FastMCP(
         "quinovo",
         instructions=(
-            "Quinovo is the operational ontology. You are already connected. "
-            "Do not wait for the user to tell you to use it. "
-            "Quinovo runs itself: a background loop ticks every few seconds "
-            "and on every write — it pulls sources, enriches new turns with "
-            "semantic connections, proposes packs/rules, infers, and applies "
-            "unattended actions. Never ask the user to say 'quinovo tick' and "
-            "never wait to be told to use Quinovo. "
-            "At the end of every turn, call remember with the raw turn text "
-            "(plus topic when you know it). remember extracts the entities "
-            "and relations — who did what to whom, what contains what, what "
-            "that implies — and writes linked Facts, Memories, and Persons in "
-            "one call. Use save_turn only when you already have structured "
-            "facts, decisions, todos, questions, memories, or skills. "
-            "Never skip the end-of-turn capture. Missing topics are created. "
-            "Cretex work files under topic 'cretex' with subtopics 'technology' and "
-            "'workflows' (use topic='cretex/workflows' or parent='cretex'). "
-            "tick pulls data sources (including agent transcripts), runs external logic, "
-            "synthesizes pack and inference-rule proposals from the live index, infers, "
-            "and applies unattended recommended actions. "
-            "Humans never write packs or rules. Propose them with a confidence score. "
-            f"Below {threshold} parks for HITL; {threshold} and above auto-applies. "
-            "The only human job is approve_proposal, reject_proposal, "
-            "approve_inferred_fact, approve_pending_action, and reject_pending_action. "
-            "Prefer apply_action when a named verb exists. Never SQL. Never write YAML. "
+            "Quinovo is the agent's operational memory: a typed graph of Topics, "
+            "Entities (people, systems, tools, projects), Facts as subject-"
+            "predicate-value triples linked to their Entities, plus Decisions, "
+            "Todos, OpenQuestions, Memories, and Skills - all filed under Topics. "
+            "You are already connected; use it without being asked.\n"
+            "Start of session: call briefing once. It is one page - active "
+            "topics, open and stale work, recent decisions, memories, top "
+            "entities, and what waits on a human.\n"
+            "Before answering about any system, person, project, or topic: call "
+            "about(name). Before saying you do not know something: call "
+            "recall(query). Both return human sentences, not tables.\n"
+            "End of every turn: call save_turn with the topic, a one-paragraph "
+            "summary, and every fact (subject, predicate, value), decision, todo, "
+            "question, memory, and skill from the turn. Add about=[entity names] "
+            "on todos, decisions, questions, and memories so they attach to the "
+            "graph. If you only have raw text, call remember(text, topic) and the "
+            "loop extracts entities and triples itself. Never skip capture. "
+            "Missing topics are created; nested topics use slashes "
+            "(cretex/workflows) or parent=. Cretex work files under 'cretex' with "
+            "subtopics 'technology' and 'workflows'.\n"
+            "A background loop already ticks every few seconds and on every "
+            "write: it pulls sources, extracts from new turns, infers, and "
+            "applies unattended actions. Do not call tick unless you need fresh "
+            "results synchronously, and never ask the user to run it.\n"
+            "Humans never write packs or rules. Propose with a confidence score: "
+            f"below {threshold} parks for approval, {threshold} and above applies. "
+            "The only human jobs are approve_proposal, reject_proposal, "
+            "approve_inferred_fact, approve_pending_action, reject_pending_action. "
+            "Prefer apply_action when a named verb exists. Never SQL. Never YAML. "
+            "Every list tool is paged (limit=) - narrow with filters instead of "
+            "raising the limit.\n"
             f"Pack: {pack_name}. Object types: {types}. Link sides: {side_hint}. "
             f"Actions: {actions}."
         ),
@@ -69,14 +84,16 @@ def contract_registry() -> FastMCP:
 def _register_tools(mcp: FastMCP, kernel: Kernel, side_hint: str) -> None:
     @mcp.tool(
         description=(
-            "Autonomous loop: pull sources, enrich new turns with semantic "
-            "connections, synthesize rules, infer, apply unattended actions, "
-            "return HITL. The background loop already runs this — call it only "
-            "when you need fresh results synchronously."
+            "Run one pass of the loop now: pull sources, extract from new turns, "
+            "author proposals, infer, apply unattended actions. Returns a short "
+            "digest (counts, a few names, what waits on a human). The background "
+            "loop already runs this every few seconds; call it only when you "
+            "need fresh results synchronously. verbose=true returns everything."
         )
     )
-    def tick(actor: str = "autonomous") -> dict[str, Any]:
-        return kernel.tick(actor)
+    def tick(actor: str = "autonomous", verbose: bool = False) -> dict[str, Any]:
+        result = kernel.tick(actor)
+        return result if verbose else tick_digest(result)
 
     @mcp.tool(
         description=(
@@ -121,13 +138,16 @@ def _register_tools(mcp: FastMCP, kernel: Kernel, side_hint: str) -> None:
 
     @mcp.tool(
         description=(
-            "Capture one agent turn as a structured Conversation. Writes the "
-            "Conversation, creates the Topic if missing, links it, writes each "
-            "structured item (facts, decisions, todos, open questions, memories, "
-            "skills) as its own object, and links them back. Call this at the "
-            "end of every turn. Nested topics use slashes (cretex/workflows) "
-            "or parent=. Optional project= groups facts/todos/decisions under "
-            "a Project. Each list argument can be [] or omitted."
+            "Capture one agent turn. Writes the Conversation, creates the Topic "
+            "if missing, and writes each item as its own linked object. "
+            "facts=[{subject, predicate, value}] become triples linked to their "
+            "subject and object Entities (the subject Entity is created if new). "
+            "todos/decisions/questions/memories accept about=[entity names] so "
+            "they hang off the graph. decisions=[{choice, context, reasoning}], "
+            "todos=[{text}], questions=[{text}], memories=[{text, kind}], "
+            "skills=[{name, description, trigger, path}]. Call this at the end "
+            "of every turn. Nested topics use slashes (cretex/workflows) or "
+            "parent=. Optional project= groups items under a Project."
         )
     )
     def save_turn(
@@ -200,25 +220,54 @@ def _register_tools(mcp: FastMCP, kernel: Kernel, side_hint: str) -> None:
     def search_around(object_type: str, id: str, side: str) -> dict[str, Any]:
         return kernel.search_around(object_type, id, side)
 
-    @mcp.tool(description="Object-set read: list objects of a type, optionally by property equals.")
+    @mcp.tool(
+        description=(
+            "Objects of one type, paged. Narrow with property_name+equals "
+            "(exact) or contains= (substring across id and text). Returns "
+            "total so you know what you did not see. Prefer recall/about for "
+            "questions; use this for exact listings."
+        )
+    )
     def filter_objects(
         object_type: str,
         property_name: str | None = None,
         equals: str | None = None,
+        contains: str | None = None,
+        limit: int = DEFAULT_PAGE,
     ) -> dict[str, Any]:
-        return kernel.filter_objects(object_type, property_name, equals)
+        return kernel.filter_objects(
+            object_type, property_name, equals, contains=contains, limit=_page(limit)
+        )
 
-    @mcp.tool(description="List every named link in the index.")
-    def list_links() -> dict[str, Any]:
-        return kernel.list_links()
+    @mcp.tool(
+        description=(
+            "Named links, paged. Narrow with link_type=, from_id=, to_id=. "
+            "For one object's neighbours use search_around instead."
+        )
+    )
+    def list_links(
+        link_type: str | None = None,
+        from_id: str | None = None,
+        to_id: str | None = None,
+        limit: int = DEFAULT_PAGE,
+    ) -> dict[str, Any]:
+        return kernel.list_links(
+            link_type=link_type, from_id=from_id, to_id=to_id, limit=_page(limit)
+        )
 
-    @mcp.tool(description="List inferred facts. Pending facts are HITL.")
+    @mcp.tool(
+        description=(
+            "Inferred facts, newest last, paged. status=pending is the HITL "
+            "queue. Narrow by object_type and id."
+        )
+    )
     def list_inferred_facts(
         object_type: str | None = None,
         id: str | None = None,
         status: str | None = "asserted",
+        limit: int = DEFAULT_PAGE,
     ) -> dict[str, Any]:
-        return kernel.list_inferred_facts(object_type, id, status)
+        return kernel.list_inferred_facts(object_type, id, status, limit=_page(limit))
 
     @mcp.tool(description="Forward-chain typed inference over objects, links, and forecasts.")
     def run_inference() -> dict[str, Any]:
@@ -346,9 +395,9 @@ def _register_tools(mcp: FastMCP, kernel: Kernel, side_hint: str) -> None:
         except (KeyError, ActionError) as exc:
             raise ValueError(str(exc)) from exc
 
-    @mcp.tool(description="List pack/rule/type proposals. Pending items are HITL.")
-    def list_proposals(status: str | None = "pending") -> dict[str, Any]:
-        return kernel.list_proposals(status)
+    @mcp.tool(description="Pack/rule/type proposals, newest last, paged. Pending items are HITL.")
+    def list_proposals(status: str | None = "pending", limit: int = DEFAULT_PAGE) -> dict[str, Any]:
+        return kernel.list_proposals(status, limit=_page(limit))
 
     @mcp.tool(description="Approve a pending proposal and write it to the pack.")
     def approve_proposal(proposal_id: int, actor: str = "human") -> dict[str, Any]:
@@ -364,9 +413,22 @@ def _register_tools(mcp: FastMCP, kernel: Kernel, side_hint: str) -> None:
         except ProposalError as exc:
             raise ValueError(str(exc)) from exc
 
-    @mcp.tool(description="Typed graph: objects and named links for the loaded pack.")
-    def graph() -> dict[str, Any]:
-        return kernel.graph()
+    @mcp.tool(
+        description=(
+            "Typed graph slice: nodes and links. Scope it - types=['Entity','Fact'] "
+            "keeps those types, around_type+around_id keeps one node and its "
+            "neighbours, limit caps nodes (links follow). Unscoped calls are "
+            "capped at limit; use about(name) for a readable view."
+        )
+    )
+    def graph(
+        types: list[str] | None = None,
+        around_type: str | None = None,
+        around_id: str | None = None,
+        limit: int = MAX_PAGE,
+    ) -> dict[str, Any]:
+        around = (around_type, around_id) if around_type and around_id else None
+        return kernel.graph(types=types, around=around, limit=_page(limit))
 
     @mcp.tool(description="List registered data sources (connectors that pull data into the ontology).")
     def list_sources() -> dict[str, Any]:

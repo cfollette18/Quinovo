@@ -19,11 +19,12 @@ def hermes_skill() -> dict[str, Any]:
     return {
         "name": "quinovo",
         "description": (
-            "Operational ontology. It ticks itself in the background — never "
-            "ask for 'quinovo tick'. Call remember at the end of every turn "
-            "with the raw text (save_turn only when already structured). "
-            "Propose packs and rules; humans only approve HITL. "
-            "Read/write objects and links."
+            "Operational memory as a typed graph. Start with briefing, call "
+            "about(name) or recall(query) before answering, and save_turn at "
+            "the end of every turn with facts as subject-predicate-value "
+            "triples (remember(text) when you only have raw text). It ticks "
+            "itself in the background - never ask for 'quinovo tick'. "
+            "Propose packs and rules; humans only approve HITL."
         ),
         "tools": tool_specs(),
     }

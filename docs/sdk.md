@@ -12,9 +12,10 @@ uv run quinovo mcp --pack /abs/path/to/your/pack --db /abs/path/to/quinovo.sqlit
 
 The tool list is generated from the loaded pack. The full set (see `contract` / `tool_specs()`):
 
-- **Loop:** `tick` — pulls sources, enriches new turns with semantic connections, authors proposals, infers, applies unattended actions, returns HITL. A background loop already runs this; agents never need to be told "quinovo tick".
-- **Capture:** `remember` — one call with raw turn text writes the Conversation plus human-style semantic connections (linked Facts, Memories, Persons). Prefer it over `save_turn` unless you already have structured items.
-- **Reads:** `list_object_types`, `get_object`, `search_around`, `filter_objects`, `list_links`, `list_inferred_facts`, `explain_fact`, `get_series`, `graph`.
+- **Ask (start here):** `briefing` — one page of what is live: active topics, open and stale work, recent decisions, memories, top entities, and what waits on a human. `about(name)` — everything the graph knows about one Entity or Topic as sentences, both directions of every typed link. `recall(query, topic=, types=)` — ranked search across every object type, each hit one human line.
+- **Capture:** `save_turn` — the end-of-turn write: topic, summary, and every fact as a `{subject, predicate, value}` triple (linked to its subject and object Entities), plus decisions, todos, questions, memories, and skills with `about=[entity names]`. `remember(text, topic)` — raw text in; the loop extracts entities and triples with the configured model.
+- **Loop:** `tick` — pulls sources, extracts from new turns, authors proposals, infers, applies unattended actions. Returns a short digest (`verbose=true` for everything). A background loop already runs this; agents never need to be told "quinovo tick".
+- **Reads (all paged with `limit=` and a `total`):** `list_object_types`, `get_object`, `search_around`, `filter_objects` (`equals=` / `contains=`), `list_links` (`link_type=`, `from_id=`, `to_id=`), `list_inferred_facts`, `explain_fact`, `get_series`, `graph` (`types=`, `around_type`+`around_id`).
 - **Writes (the only legal writes):** `apply_action`, `upsert_object`, `set_link`, `remove_link`, `delete_object`, `append_series`.
 - **Authoring (humans never write YAML):** `propose`, `propose_pack`, `propose_rule`, `propose_type`, `propose_action` — all HITL below 0.8.
 - **Connectors (data in):** `register_source`, `list_sources`, `pull_source`, `pull_sources`, `ingest_source`, `delete_source`.

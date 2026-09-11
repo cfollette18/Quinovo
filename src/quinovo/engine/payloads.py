@@ -77,7 +77,6 @@ def object_payload(store: ObjectStore, obj: StoredObject) -> dict[str, Any]:
             for item in store.list_forecasts(obj.object_type, obj.id)
         ],
         "facts": noticed,
-        "inferred": noticed,
     }
 
 
@@ -195,28 +194,67 @@ def link_payload(link: StoredLink) -> dict[str, Any]:
     }
 
 
-def graph_payload(ontology: Ontology, store: ObjectStore) -> dict[str, Any]:
-    """Nodes keyed by the composite Type:id label; links reference those ids."""
+def graph_payload(
+    ontology: Ontology,
+    store: ObjectStore,
+    *,
+    types: list[str] | None = None,
+    around: tuple[str, str] | None = None,
+    limit: int | None = None,
+) -> dict[str, Any]:
+    """Nodes keyed by the composite Type:id label; links reference those ids.
+
+    types= keeps only those object types; around=(type, id) keeps that node
+    and its direct neighbours; limit= caps the node count (links follow).
+    """
+    wanted = set(types) if types else None
+    all_links = store.list_all_links()
+    keep: set[str] | None = None
+    if around is not None:
+        centre = f"{around[0]}:{around[1]}"
+        keep = {centre}
+        for link in all_links:
+            src = f"{link.from_type}:{link.from_id}"
+            dst = f"{link.to_type}:{link.to_id}"
+            if src == centre:
+                keep.add(dst)
+            elif dst == centre:
+                keep.add(src)
     nodes: list[dict[str, Any]] = []
     for type_def in ontology.object_types:
+        if wanted is not None and type_def.api_name not in wanted:
+            continue
         title_prop = type_def.title_property
         for obj in store.list_objects(type_def.api_name):
+            node_id = f"{obj.object_type}:{obj.id}"
+            if keep is not None and node_id not in keep:
+                continue
             label = obj.properties.get(title_prop, obj.id)
             nodes.append(
                 {
-                    "id": f"{obj.object_type}:{obj.id}",
+                    "id": node_id,
                     "type": obj.object_type,
                     "pk": obj.id,
                     "label": str(label),
                 }
             )
+    total_nodes = len(nodes)
+    if limit is not None:
+        nodes = nodes[: max(0, limit)]
+    node_ids = {node["id"] for node in nodes}
+    bounded = wanted is not None or keep is not None or limit is not None
     links = [
         {
             "link_type": link.link_type,
             "from_id": f"{link.from_type}:{link.from_id}",
             "to_id": f"{link.to_type}:{link.to_id}",
         }
-        for link in store.list_all_links()
+        for link in all_links
+        if not bounded
+        or (
+            f"{link.from_type}:{link.from_id}" in node_ids
+            and f"{link.to_type}:{link.to_id}" in node_ids
+        )
     ]
     edges = [
         {
@@ -232,4 +270,5 @@ def graph_payload(ontology: Ontology, store: ObjectStore) -> dict[str, Any]:
         "nodes": nodes,
         "links": links,
         "edges": edges,
+        "total_nodes": total_nodes,
     }

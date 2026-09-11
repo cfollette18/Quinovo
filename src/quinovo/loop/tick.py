@@ -14,6 +14,58 @@ from quinovo.topics import organize_topics
 
 logger = logging.getLogger(__name__)
 
+DIGEST_ITEMS = 5
+
+
+def _first(items: list[Any], key: str, n: int = DIGEST_ITEMS) -> list[Any]:
+    return [item.get(key) if isinstance(item, dict) else item for item in items[:n]]
+
+
+def tick_digest(result: dict[str, Any]) -> dict[str, Any]:
+    """The tick result an agent can read in one glance: counts plus a few names.
+
+    The full result stays available to the HTTP app and tests; over MCP a
+    200 KB dump of every pending fact was the single worst thing Quinovo did.
+    """
+    semantics = result.get("semantics") or {}
+    pending_facts = result.get("pending_facts") or []
+    pending_actions = result.get("pending_actions") or []
+    pending_proposals = result.get("pending_proposals") or []
+    applied = result.get("applied") or []
+    errors = result.get("errors") or []
+    return {
+        "authoring": result.get("authoring"),
+        "inferred": len(result.get("facts") or []),
+        "applied": len(applied),
+        "errors": len(errors),
+        "enriched_turns": int(semantics.get("conversations") or 0),
+        "turns_remaining": int(semantics.get("remaining") or 0),
+        "new_entities": _first(list(semantics.get("entities") or []), "name"),
+        "new_facts": len(semantics.get("facts") or []),
+        "sources_pulled": len(result.get("sources_pulled") or []),
+        "topics_created": list(result.get("topics_created") or [])[:DIGEST_ITEMS],
+        "waiting_on_human": {
+            "inferred_facts": len(pending_facts),
+            "actions": len(pending_actions),
+            "proposals": len(pending_proposals),
+        },
+        "next_for_human": [
+            *[
+                f"fact #{f.get('id')}: {f.get('object_type')} {f.get('object_id')} {f.get('predicate')}={f.get('value')}"
+                for f in pending_facts[:DIGEST_ITEMS]
+            ],
+            *[
+                f"proposal #{p.get('id')}: {p.get('title') or p.get('kind')}"
+                for p in pending_proposals[:DIGEST_ITEMS]
+            ],
+            *[
+                f"action #{a.get('id')}: {a.get('action_type')}"
+                for a in pending_actions[:DIGEST_ITEMS]
+            ],
+        ],
+        "first_errors": [e.get("error") for e in errors[:DIGEST_ITEMS]],
+    }
+
 
 def tick(
     kernel: Any,
