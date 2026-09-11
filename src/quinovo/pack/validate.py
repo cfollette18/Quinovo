@@ -63,6 +63,11 @@ def validate_ruleset(
                 f"{source}: rule {rule.api_name}: when_property "
                 f"{rule.when_property.api_name!r} is not a property of {rule.source_type}"
             )
+        if rule.when_age is not None and rule.when_age.property not in properties:
+            raise PackValidationError(
+                f"{source}: rule {rule.api_name}: when_age "
+                f"{rule.when_age.property!r} is not a property of {rule.source_type}"
+            )
         sides = link_sides(ontology, rule.source_type)
         watched = ([rule.when_link] if rule.when_link is not None else []) + list(
             rule.when_links

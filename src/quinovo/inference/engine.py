@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from quinovo.engine.store import InferredFact, ObjectStore, StoredObject
@@ -67,8 +68,57 @@ def _fire_rule(store: ObjectStore, rule: InferenceRule) -> list[InferredFact]:
             return _property_fact(store, rule)
         case "join_links":
             return _join_links(store, rule)
+        case "age_fact":
+            return _age_fact(store, rule)
         case _ as unreachable:
             raise TypeError(f"unhandled rule kind: {unreachable}")
+
+
+def _parse_timestamp(raw: Any) -> datetime | None:
+    if not raw:
+        return None
+    text = str(raw).strip()
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    return parsed
+
+
+def _age_fact(store: ObjectStore, rule: InferenceRule) -> list[InferredFact]:
+    """A timestamp older than N days (optionally gated on a property) yields a fact."""
+    when = rule.when_age
+    then = rule.then_fact
+    if when is None or then is None:
+        return []
+    out: list[InferredFact] = []
+    confidence = rule.resolved_confidence()
+    cutoff = datetime.now(UTC) - timedelta(days=when.older_than_days)
+    gate = rule.when_property
+    for obj in store.list_objects(rule.source_type):
+        if gate is not None and not _property_is_set(obj.properties.get(gate.api_name), gate.equals):
+            continue
+        stamp = _parse_timestamp(obj.properties.get(when.property))
+        if stamp is None or stamp > cutoff:
+            continue
+        age_days = (datetime.now(UTC) - stamp).days
+        fact = _commit_fact(
+            store,
+            obj,
+            then.predicate,
+            then.value,
+            confidence,
+            rule.api_name,
+            "inferred",
+            {"property": when.property, "age_days": age_days, "older_than_days": when.older_than_days},
+        )
+        if fact is not None:
+            out.append(fact)
+    return out
 
 
 def _forecast_fact(store: ObjectStore, rule: InferenceRule) -> list[InferredFact]:

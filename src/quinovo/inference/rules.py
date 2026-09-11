@@ -12,6 +12,7 @@ RuleKind = Literal[
     "prefix_link",
     "property_fact",
     "join_links",
+    "age_fact",
 ]
 
 ConfidenceSource = Literal["forecast"]
@@ -20,6 +21,13 @@ ConfidenceSource = Literal["forecast"]
 class ForecastWhen(QuinovoModel):
     metric: str
     point_gte: float
+
+
+class AgeWhen(QuinovoModel):
+    """A timestamp property older than N days. ISO 8601 strings only."""
+
+    property: str
+    older_than_days: float
 
 
 class FactWhen(QuinovoModel):
@@ -53,6 +61,7 @@ class InferenceRule(QuinovoModel):
     when_forecast: ForecastWhen | None = None
     when_fact: FactWhen | None = None
     when_property: PropertyWhen | None = None
+    when_age: AgeWhen | None = None
     when_link: str | None = None
     when_links: list[str] = Field(default_factory=list)
     when_pk_prefix: str | None = None
@@ -91,6 +100,9 @@ class InferenceRule(QuinovoModel):
                     raise ValueError(
                         f"{self.api_name}: join_links needs when_links (2+) and then_fact"
                     )
+            case "age_fact":
+                if self.when_age is None or self.then_fact is None:
+                    raise ValueError(f"{self.api_name}: age_fact needs when_age and then_fact")
             case _ as unreachable:
                 raise TypeError(f"unhandled rule kind: {unreachable}")
         return self

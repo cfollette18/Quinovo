@@ -58,6 +58,10 @@ def _rule_fingerprint(payload: dict[str, Any]) -> tuple[Any, ...]:
                 then.get("link_type"),
                 then.get("to_id"),
             )
+        case "age_fact":
+            when = payload["when_age"]
+            then = payload["then_fact"]
+            return ("age_fact", source, when["property"], then.get("predicate"))
         case _ as unreachable:
             raise TypeError(f"unhandled rule kind: {unreachable}")
 

@@ -3,10 +3,13 @@ ontology:
   display_name: Conversational world
   description: 'A typed model of the agent''s working memory. Topics anchor everything;
     Conversations, Facts, Memories, Todos, Skills, Decisions, and OpenQuestions hang
-    off Topics through in_topic links. Designed for autonomous capture: the agent
-    writes structured objects at the end of every turn, the typed inference layer
-    promotes them, and unattended actions trigger downstream side effects (auto-link
-    to a Person, mark a Todo as captured, notify when a decision is recorded).
+    off Topics through in_topic links. Entities are the nouns (people, systems,
+    tools, projects, concepts) and Facts are triples about them: subject, predicate,
+    value, with typed links to the subject and object Entity so the graph is
+    traversable. Designed for autonomous capture: the agent writes structured
+    objects at the end of every turn, the loop extracts entities and triples from
+    raw turns, typed inference flags stale work, and unattended actions handle the
+    rest.
 
     '
 shared_properties:
@@ -71,23 +74,61 @@ object_types:
   - api_name: role
     type: string
     required: false
-    description: free-form tag (planning, design, debug, ship, etc.)
+    description: free-form tag (planning, design, debug, ship, transcript, observed)
+  - api_name: enriched
+    type: string
+    required: false
+    description: extractor version that already turned this turn into entities and facts
+- api_name: Entity
+  primary_key: id
+  title_property: name
+  implements:
+  - TimeStamped
+  description: A noun the world keeps talking about - a person, organization, system,
+    tool, project, place, or concept. Facts hang off Entities as subject and object,
+    so asking about an Entity walks the graph.
+  properties:
+  - api_name: id
+    type: string
+    description: slug, lowercase, no spaces (e.g. langfuse, epicor, cfollette18)
+  - api_name: name
+    type: string
+    description: canonical display name
+  - api_name: kind
+    type: string
+    description: person, organization, system, tool, project, place, or concept
+  - api_name: description
+    type: string
+    required: false
+    description: one sentence saying what this is
+  - api_name: aliases
+    type: string
+    required: false
+    description: other names for the same thing, separated by " | "
+  - api_name: recorded_at
+    type: string
+    required: false
 - api_name: Fact
   primary_key: id
   title_property: predicate
   implements:
   - BelongsToTopic
   - TimeStamped
-  description: A single structured claim. The most atomic unit of knowledge.
+  description: A single structured claim as a triple - subject, predicate, value. The
+    most atomic unit of knowledge. Subject and object Entities are linked when known.
   properties:
   - api_name: id
     type: string
+  - api_name: subject
+    type: string
+    required: false
+    description: what the claim is about, as the Entity name (e.g. Langfuse)
   - api_name: predicate
     type: string
-    description: short verb-like label (e.g. uses, decided, blocked_on)
+    description: short verb-like label (e.g. uses, runs_on, decided, blocked_on)
   - api_name: value
     type: string
-    description: the object of the claim, free-form string
+    description: the object of the claim - an Entity name or a short literal
   - api_name: confidence
     type: number
   - api_name: recorded_at
@@ -908,6 +949,62 @@ link_types:
   to_name: subtopics
   cardinality: many_to_one
   description: Topic hierarchy (e.g. cretex -> ivanti).
+- api_name: entity_in_topic
+  from_type: Entity
+  to_type: Topic
+  from_name: topics
+  to_name: entities
+  cardinality: many_to_many
+  description: An Entity shows up in a Topic.
+- api_name: fact_subject
+  from_type: Fact
+  to_type: Entity
+  from_name: subject_entity
+  to_name: facts_about
+  cardinality: many_to_one
+  description: The Entity a Fact is about.
+- api_name: fact_object
+  from_type: Fact
+  to_type: Entity
+  from_name: object_entity
+  to_name: facts_mentioning
+  cardinality: many_to_one
+  description: The Entity a Fact points at as its value.
+- api_name: mentions
+  from_type: Conversation
+  to_type: Entity
+  from_name: entities
+  to_name: conversations
+  cardinality: many_to_many
+  description: A turn mentioned an Entity.
+- api_name: todo_about_entity
+  from_type: Todo
+  to_type: Entity
+  from_name: about
+  to_name: todos
+  cardinality: many_to_many
+  description: A Todo concerns an Entity.
+- api_name: decision_about_entity
+  from_type: Decision
+  to_type: Entity
+  from_name: about
+  to_name: decisions
+  cardinality: many_to_many
+  description: A Decision concerns an Entity.
+- api_name: question_about_entity
+  from_type: OpenQuestion
+  to_type: Entity
+  from_name: about
+  to_name: open_questions
+  cardinality: many_to_many
+  description: An OpenQuestion concerns an Entity.
+- api_name: memory_about_entity
+  from_type: Memory
+  to_type: Entity
+  from_name: about
+  to_name: memories
+  cardinality: many_to_many
+  description: A Memory concerns an Entity.
 - api_name: principle_mitigates_risk
   from_type: ArchitecturalPrinciple
   to_type: Risk

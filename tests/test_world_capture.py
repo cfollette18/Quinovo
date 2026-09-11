@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime, timedelta
 
 from quinovo.connectors.transcripts import parse_transcript, topic_for_path
 from quinovo.kernel import open_kernel
@@ -86,14 +87,28 @@ def test_save_turn_creates_brand_new_topic(tmp_path):
     assert obj["properties"]["status"] == "active"
 
 
-def test_recorded_at_present_marks_conversation_captured(tmp_path):
+def test_open_todo_older_than_two_weeks_is_stale(tmp_path):
     kernel = _world(tmp_path)
-    kernel.save_turn("sess-3", 1, "quinovo", "Inference should mark this captured.", actor="test")
+    old = (datetime.now(UTC) - timedelta(days=20)).isoformat()
+    kernel.save_turn(
+        "sess-3",
+        1,
+        "quinovo",
+        "Two todos, one forgotten.",
+        todos=[
+            {"id": "todo_old", "text": "Forgotten work.", "recorded_at": old},
+            {"id": "todo_new", "text": "Fresh work."},
+        ],
+        actor="test",
+    )
     kernel.run_inference()
-    box = kernel.get_object("Conversation", "sess-3:1")
-    predicates = {fact["predicate"]: fact for fact in box["facts"]}
-    assert predicates["captured"]["value"] == "true"
-    assert predicates["captured"]["status"] == "asserted"
+    old_box = kernel.get_object("Todo", "todo_old")
+    predicates = {fact["predicate"]: fact for fact in old_box["facts"]}
+    assert predicates["stale"]["value"] == "true"
+    assert predicates["stale"]["status"] == "asserted"
+    assert predicates["stale"]["provenance_detail"]["age_days"] >= 20
+    fresh = kernel.get_object("Todo", "todo_new")
+    assert not any(fact["predicate"] == "stale" for fact in fresh["facts"])
 
 
 def test_transcripts_source_files_under_cretex_path(tmp_path):
