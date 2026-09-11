@@ -32,7 +32,7 @@ def test_remember_writes_linked_knowledge(tmp_path):
     assert "lipstick" in values
     assert "jerry" in values
     # Persons are resolved for the human actors.
-    persons = {item["id"] for item in kernel.store.list_objects("Person")}
+    persons = {item.id for item in kernel.store.list_objects("Person")}
     assert "bob" in persons
     assert "jerry" in persons
 
