@@ -84,13 +84,16 @@ def test_write_extraction_links_triples_to_entities(tmp_path):
 def test_same_triple_twice_is_one_fact(tmp_path):
     kernel = _world(tmp_path)
     kernel.save_turn("s", 1, "quinovo", "first", actor="test")
-    kernel.save_turn("s", 2, "quinovo", "second", actor="test")
+    kernel.save_turn("s", 2, "langfuse", "second, in another topic", actor="test")
     first = write_extraction(kernel, parse_extraction(EXTRACTION), conv_id="s:1", topic_id="quinovo", actor="test")
-    second = write_extraction(kernel, parse_extraction(EXTRACTION), conv_id="s:2", topic_id="quinovo", actor="test")
+    second = write_extraction(kernel, parse_extraction(EXTRACTION), conv_id="s:2", topic_id="langfuse", actor="test")
     assert second["facts"] == []
     assert len(kernel.store.list_objects("Fact")) == len(first["facts"])
     produced_by = kernel.search_around("Fact", first["facts"][0], "conversation")["objects"]
     assert {item["id"] for item in produced_by} == {"s:1", "s:2"}
+    # A fact keeps the topic of the turn that first said it.
+    topics = kernel.search_around("Fact", first["facts"][0], "topic")["objects"]
+    assert [item["id"] for item in topics] == ["quinovo"]
 
 
 def test_aliases_resolve_to_one_entity(tmp_path):

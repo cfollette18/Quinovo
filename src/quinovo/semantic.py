@@ -73,6 +73,13 @@ def _safe_link(kernel: Any, link_type: str, from_id: str, to_id: str, actor: str
         return False
 
 
+def _has_topic(kernel: Any, object_type: str, object_id: str) -> bool:
+    try:
+        return bool(kernel.store.search_around(object_type, object_id, "topic"))
+    except KeyError:
+        return False
+
+
 def normalize_predicate(raw: Any) -> str:
     text = _PREDICATE_RE.sub("_", str(raw or "").strip().lower()).strip("_")
     return text[:40]
@@ -293,7 +300,9 @@ def _write_fact(
             props = dict(existing.properties)
             props["confidence"] = confidence
             kernel.upsert_object("Fact", props, actor=actor)
-    _safe_link(kernel, "fact_in_topic", fact_id, topic_id, actor)
+    if existing is None or not _has_topic(kernel, "Fact", fact_id):
+        # A fact lives in one topic: the topic of the turn that first said it.
+        _safe_link(kernel, "fact_in_topic", fact_id, topic_id, actor)
     _safe_link(kernel, "fact_subject", fact_id, subject_id, actor)
     if object_id is not None:
         _safe_link(kernel, "fact_object", fact_id, object_id, actor)
@@ -564,7 +573,7 @@ def remember_text(
         raise ValueError("this pack has no Conversation/Topic types")
     topic_id = ensure_topic(kernel, topic or "quinovo", actor=actor)
     recorded_at = datetime.now(UTC).isoformat()
-    digest = hashlib.sha1(f"{session_id}|{recorded_at}|{cleaned}".encode("utf-8")).hexdigest()[:10]
+    digest = hashlib.sha1(f"{session_id}|{recorded_at}|{cleaned}".encode()).hexdigest()[:10]
     conv_id = f"remember-{slugify(session_id)[-16:]}-{digest}"
     kernel.upsert_object(
         "Conversation",
