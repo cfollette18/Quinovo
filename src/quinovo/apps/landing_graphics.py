@@ -1,8 +1,8 @@
 """Inline SVG / HTML diagrams for the public landing page.
 
-Dashboard mockup matches the Graph workspace (kind lanes, swatch cards,
-lava selection, yellow “needs a look”). The loop is the Quinovo mark
-exploded: four square stations on a diamond around a mini graph.
+Dashboard mockup matches the Chat workspace (composer, tool steps, a short
+answer). The loop is the Quinovo mark exploded: four square stations on a
+diamond around a mini graph.
 """
 
 from __future__ import annotations
@@ -53,8 +53,7 @@ BRICKS_ON_DARK = (
 # Same marks as the workspace rail (stroke icons, currentColor).
 _RAIL = (
     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-    'stroke-width="1.8"><circle cx="6" cy="7" r="2.2"/><circle cx="18" cy="7" r="2.2"/>'
-    '<circle cx="12" cy="17" r="2.2"/><path d="M8 8.2 10.4 15M16 8.2 13.6 15"/></svg>',
+    'stroke-width="1.8"><path d="M4 5h16v11H8l-4 3V5z"/></svg>',
     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
     'stroke-width="1.8"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/>'
     '<rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></svg>',
@@ -134,43 +133,12 @@ def _pause_btn() -> str:
 
 
 def hero_workspace_mockup() -> str:
-    """Framed Graph, stripped to one confident composition.
+    """Framed Chat, stripped to one confident composition.
 
-    Three lanes, three nodes, two clean orthogonal edges, one Lava focal with
-    a soft idle ring pulse. The rail and topbar stay so the frame still reads
-    as the real product; the interior is calm enough to read in under a second.
+    A user question, one tool step with a Lava square token, a short answer,
+    and the composer. The rail and topbar stay so the frame still reads as
+    the real product.
     """
-    # One node per lane, vertically centered. Card w=160, h=50 → centers below.
-    graph = (
-        f'<svg class="mock-graph-svg" viewBox="0 0 640 340" xmlns="http://www.w3.org/2000/svg" '
-        'aria-hidden="true" focusable="false">'
-        # Lane bands + rules
-        f'<rect x="0" y="0" width="213" height="340" fill="{WHITE}"/>'
-        f'<rect x="213" y="0" width="213" height="340" fill="rgba(255,255,255,0.5)"/>'
-        f'<rect x="426" y="0" width="214" height="340" fill="{WHITE}"/>'
-        f'<line x1="213" y1="8" x2="213" y2="332" stroke="{BORDER}" stroke-width="1"/>'
-        f'<line x1="426" y1="8" x2="426" y2="332" stroke="{BORDER}" stroke-width="1"/>'
-        # Lane labels
-        f'<text x="16" y="22" fill="{NAVY}" font-size="12" font-weight="500" '
-        f'font-family="{_FONT}">Package</text>'
-        f'<text x="229" y="22" fill="{NAVY}" font-size="12" font-weight="500" '
-        f'font-family="{_FONT}">Person</text>'
-        f'<text x="442" y="22" fill="{NAVY}" font-size="12" font-weight="500" '
-        f'font-family="{_FONT}">Product</text>'
-        # Two clean edges: Package → Person (hot), Package → Product
-        f'{_edge(106, 145, 319, 145, "destined for", hot=True)}'
-        f'{_edge(106, 145, 532, 145, "contains")}'
-        # Three nodes, one per lane, centered
-        f'{_card(26, 120, LAVA, "Package", "1Z999", selected=True)}'
-        f'{_card(239, 120, BLUE, "Person", "Bob")}'
-        f'{_card(452, 120, GREEN, "Product", "Cherry lipstick")}'
-        # Soft idle ring pulse on the Lava focal — the dopamine idle moment
-        f'<circle class="hero-pulse" cx="106" cy="145" r="6" fill="none" '
-        f'stroke="{LAVA}" stroke-width="2" opacity="0.6"/>'
-        # Lava token traveling the hot edge
-        f'<rect class="token" x="0" y="0" width="8" height="8" fill="{LAVA}"/>'
-        "</svg>"
-    )
     navs = "".join(
         f'<span class="mock-nav{" on" if i == 0 else ""}">{icon}</span>'
         for i, icon in enumerate(_RAIL[:5])
@@ -185,46 +153,31 @@ def hero_workspace_mockup() -> str:
     <div class="mock-body">
       <div class="mock-topbar">
         <span class="mock-wordmark">quinovo</span>
-        <span class="mock-search"></span>
         <span class="mock-pack">Example commerce</span>
         <span class="mock-avatar">L</span>
       </div>
-      <div class="mock-page">
-        <div class="mock-head">
-          <div class="mock-tabs">
-            <span class="on">Graph</span><span>Catalog</span><span>Inference</span>
-            <span>Connections</span><span>Audit</span>
+      <div class="mock-page mock-chat-page">
+        <div class="mock-chat">
+          <div class="mock-chat-user">Where is package 1Z999?</div>
+          <div class="mock-tool">
+            <span class="mock-tool-icon" aria-hidden="true"></span>
+            <span class="mock-tool-verb">Calling Read</span>
+            <span class="mock-tool-target">Package 1Z999</span>
+            <span class="mock-tool-token"></span>
           </div>
-          <div class="mock-chips">
-            <span class="on">All kinds</span>
-            <span><i style="background:{LAVA}"></i>Package</span>
-            <span><i style="background:{BLUE}"></i>Person</span>
-            <span><i style="background:{GREEN}"></i>Product</span>
-          </div>
+          <p class="mock-chat-answer">Destined for Bob. In transit, carrying cherry lipstick.</p>
         </div>
-        <div class="mock-layout">
-          {graph}
-          <aside class="mock-inspector">
-            <p class="mock-kicker">Package</p>
-            <p class="mock-h">1Z999</p>
-            <p class="mock-story">In transit.</p>
-            <p class="mock-h3">Connections</p>
-            <p class="mock-row">Destined for <b>Bob</b></p>
-            <p class="mock-row">Contains <b>Cherry lipstick</b></p>
-            <p class="mock-h3">What Quinovo noticed</p>
-            <p class="mock-row pending">Needs a look — suggested warehouse</p>
-            <div class="mock-actions">
-              <span class="mock-btn lava">Approve</span>
-              <span class="mock-btn">Turn down</span>
-            </div>
-          </aside>
+        <div class="mock-composer">
+          <span>Ask the graph</span>
+          <span class="mock-send"></span>
         </div>
       </div>
     </div>
   </div>
   {_pause_btn()}
-  <figcaption class="sr-only">The Graph workspace: one package, one person, one product in columns, with a soft pulse on the selected package.</figcaption>
-</figure>"""
+  <figcaption class="sr-only">The Chat workspace: a question about a package, a lookup step, and a plain-language answer.</figcaption>
+</figure>
+"""
 
 
 def _station(x: int, y: int, w: int, h: int, stage: str, title: str, sub: str, *, lava: bool = False) -> str:

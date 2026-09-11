@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 
 
 def test_rail_includes_train_and_settings(client: TestClient):
-    page = client.get("/graph")
+    page = client.get("/chat")
     assert page.status_code == 200
     assert 'href="/train"' in page.text
     assert 'href="/settings"' in page.text

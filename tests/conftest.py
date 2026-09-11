@@ -14,7 +14,11 @@ CLINIC_PACK = Path(__file__).parent / "fixtures" / "clinic"
 
 @pytest.fixture(autouse=True)
 def isolate_llm_settings(tmp_path, monkeypatch):
-    monkeypatch.setattr("quinovo.llm.settings.SETTINGS_PATH", tmp_path / "isolated-llm.yaml")
+    path = tmp_path / "isolated-llm.yaml"
+    monkeypatch.setattr("quinovo.llm.settings.SETTINGS_PATH", path)
+    from quinovo.llm.settings import LLMSettings, save_settings
+
+    save_settings(LLMSettings(api_key="", enabled=True, model="MiniMax-M3"))
 
 
 @pytest.fixture(autouse=True)
@@ -27,6 +31,11 @@ def disable_langfuse_in_tests(monkeypatch):
 @pytest.fixture(autouse=True)
 def isolate_session_data(tmp_path, monkeypatch):
     monkeypatch.setattr("quinovo.apps.session.DATA_DIR", tmp_path / "data")
+
+
+@pytest.fixture(autouse=True)
+def isolate_chats(tmp_path, monkeypatch):
+    monkeypatch.setattr("quinovo.chat.sessions.CHATS_DIR", tmp_path / "chats")
 
 
 @pytest.fixture

@@ -20,8 +20,7 @@ BRICKS = """<svg viewBox="0 0 64 64" width="28" height="28" role="img" aria-labe
 </svg>"""
 
 _ICONS = {
-    "twin": """<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3 20 8v8l-8 5-8-5V8z"/><path d="M12 8v13"/><path d="m4.5 10 7.5 4 7.5-4"/></svg>""",
-    "graph": """<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="6" cy="7" r="2.2"/><circle cx="18" cy="7" r="2.2"/><circle cx="12" cy="17" r="2.2"/><path d="M8 8.2 10.4 15M16 8.2 13.6 15"/></svg>""",
+    "chat": """<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 5h16v11H8l-4 3V5z"/></svg>""",
     "schema": """<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></svg>""",
     "logic": """<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3 6.5 12h5L10 21l7.5-10h-5L12 3z"/></svg>""",
     "audit": """<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1.2" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.2" fill="currentColor" stroke="none"/></svg>""",
@@ -33,8 +32,7 @@ _ICONS = {
 # Rail order matches docs/conventions.md. Settings stays with the other
 # destinations, not pinned off-screen at the bottom of the rail.
 _NAV: list[tuple[str, str, str]] = [
-    ("twin", "/twin", "Twin"),
-    ("graph", "/graph", "Graph"),
+    ("chat", "/chat", "Chat"),
     ("schema", "/catalog", "Catalog"),
     ("logic", "/inference", "Inference"),
     ("sources", "/sources", "Sources"),
@@ -168,10 +166,12 @@ def wrap(
     title: str,
     body: str,
     *,
-    nav: str = "graph",
+    nav: str = "chat",
     pack_name: str = "",
     extra_head: str = "",
     extra_script: str = "",
+    hide_search: bool = False,
+    body_class: str = "",
 ) -> str:
     items = []
     for key, href, label in nav_items():
@@ -184,6 +184,15 @@ def wrap(
         )
     rail = "\n      ".join(items)
     pack = esc(pack_name)
+    search = ""
+    if not hide_search:
+        search = """
+      <div class="search-wrap">
+        <label class="sr-only" for="q">Search by name</label>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20 16.5 16.5"/></svg>
+        <input id="q" type="search" placeholder="Search by name" autocomplete="off"/>
+      </div>"""
+    body_attr = f' class="{esc(body_class)}"' if body_class else ""
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -199,7 +208,7 @@ def wrap(
   <link rel="icon" href="/assets/favicon-32.png" sizes="32x32" type="image/png"/>
   {extra_head}
 </head>
-<body>
+<body{body_attr}>
   <a class="skip" href="#main">Skip to content</a>
   <aside class="rail">
     <a class="brand" href="/" title="Quinovo" aria-label="Quinovo home">{BRICKS}</a>
@@ -210,11 +219,7 @@ def wrap(
   <div class="workspace">
     <header class="topbar">
       <p class="wordmark">quinovo</p>
-      <div class="search-wrap">
-        <label class="sr-only" for="q">Search by name</label>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20 16.5 16.5"/></svg>
-        <input id="q" type="search" placeholder="Search by name" autocomplete="off"/>
-      </div>
+      {search}
       <div class="top-actions">
         <span class="pack-label" id="pack-name">{pack}</span>
         <span class="avatar" title="local" aria-label="Local user">L</span>
@@ -232,7 +237,7 @@ def wrap(
     q.addEventListener("keydown", (ev) => {{
       if (ev.key !== "Enter" || q.dataset.local === "1") return;
       const v = q.value.trim();
-      location.href = v ? "/graph?q=" + encodeURIComponent(v) : "/graph";
+      location.href = v ? "/chat?q=" + encodeURIComponent(v) : "/chat";
     }});
   }})();
   </script>

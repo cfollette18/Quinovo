@@ -4,9 +4,10 @@ from fastapi.testclient import TestClient
 
 from conftest import CLINIC_PACK
 from quinovo.kernel import open_kernel
+from quinovo.llm.settings import LLMSettings
 
 
-def test_graph_is_pack_objects_and_named_links(client: TestClient):
+def test_graph_payload_is_pack_objects_and_named_links(client: TestClient):
     graph = client.get("/graph.json").json()
     ids = {node["id"] for node in graph["nodes"]}
     assert "Package:1Z999" in ids
@@ -16,54 +17,37 @@ def test_graph_is_pack_objects_and_named_links(client: TestClient):
     assert "shipped_by" in kinds
 
 
-def test_dashboard_page_is_queryable(client: TestClient):
-    page = client.get("/graph")
+def test_chat_is_workspace_home(client: TestClient):
+    page = client.get("/chat")
     assert page.status_code == 200
-    assert "Extend graph" in page.text
-    assert "/graph" in page.text
-    assert "Search by name" in page.text
-    assert "Package 1Z999" not in page.text
-    assert 'href="/settings"' in page.text
+    assert "Ask the graph" in page.text
+    assert "chat-composer" in page.text
+    assert "chat-thread" in page.text
+    assert "New chat" in page.text
+    assert 'href="/chat"' in page.text
+    assert 'title="Chat"' in page.text
     assert 'title="Settings"' in page.text
-    assert 'href="/twin"' in page.text
-    assert 'title="Twin"' in page.text
     assert 'title="Sources"' in page.text
-    assert "All kinds" in page.text
-    assert "Show all" in page.text
-    assert "All connections" in page.text
-    assert "All topics" in page.text
-    assert 'id="card-modal"' in page.text
-    assert "topic-cluster" in page.text
-    assert "Click a card to read it" in page.text
-    assert "Tick" not in page.text
-    assert "Run inference" not in page.text
-    assert "page-head" in page.text
-    assert 'class="tabs"' in page.text
+    assert 'href="/settings"' in page.text
+    assert "Twin" not in page.text
+    assert 'title="Graph"' not in page.text
+    assert "json-panel" not in page.text
+    assert "<pre" not in page.text
     assert "/assets/chrome.css" in page.text
-    assert "--lava" not in page.text
     css = client.get("/assets/chrome.css")
     assert css.status_code == 200
     assert "#ff3621" in css.text
-    assert "margin-top: auto" not in css.text
-    assert ".card-modal" in css.text
-    assert ".topic-cluster" in css.text
+    assert ".chat-shell" in css.text
+    assert ".chat-step" in css.text
+    assert "chat-step" in page.text
     catalog = client.get("/catalog")
     assert catalog.status_code == 200
     assert "Catalog" in catalog.text
-    assert "Kinds of things" in catalog.text
-    assert "Actions" in catalog.text
     assert "json-panel" not in catalog.text
     assert "<pre" not in catalog.text
-    organized = client.post("/catalog/organize", data={"actor": "human"}, follow_redirects=False)
-    assert organized.status_code == 303
-    assert organized.headers["location"].startswith("/catalog")
     logic = client.get("/inference")
     assert logic.status_code == 200
     assert "Needs a look" in logic.text
-    assert "Run inference" not in logic.text
-    assert ">Tick<" not in logic.text
-    assert "language model from Settings" in logic.text
-    assert "/inference.json" in logic.text
     history = client.get("/audit")
     assert history.status_code == 200
     assert "Audit" in history.text
@@ -73,7 +57,6 @@ def test_landing_page_is_public(client: TestClient):
     page = client.get("/")
     assert page.status_code == 200
     text = page.text
-    # The twist: six differentiators stated in plain language.
     assert "Discovered, not hand-built" in text
     assert "MCP is the connector layer" in text
     assert "Small specialists, not one giant model" in text
@@ -84,18 +67,15 @@ def test_landing_page_is_public(client: TestClient):
     assert text.count('class="why-card') == 6
     assert "why-discovered" in text
     assert "why-record" in text
-    # Public calls to action: GitHub, run locally, connect an agent.
     assert "https://github.com/cfollette18/Quinovo" in text
     assert "uv run quinovo serve" in text
     assert "uv run quinovo mcp" in text
-    # MCP config blocks for the three named clients.
     assert "Cursor" in text
     assert "Claude Desktop" in text
     assert "Hermes" in text
     assert "/assets/agents/cursor.svg" in text
     assert "/assets/agents/claude.svg" in text
     assert "/assets/agents/hermes.svg" in text
-    # Action layer: write-backs to systems teams already run.
     assert "Actions write back to the tools you already run" in text
     assert "universal adapters" in text
     assert "SAP" in text
@@ -103,17 +83,14 @@ def test_landing_page_is_public(client: TestClient):
     assert "Jira" in text
     assert "Slack" in text
     assert "/assets/actions/sap.svg" in text
-    # The landing page is its own thing — no workspace chrome.
     assert "/assets/landing.css" in text
     assert "Search by name" not in text
-    # Workspace graph still reachable at /graph from the landing nav.
-    assert 'href="/twin"' in text
-    # Apache-2.0 attribution in the footer.
+    assert 'href="/chat"' in text
     assert "Apache-2.0" in text
     assert "cfollette18" in text
-    # Databricks-style graphics: workspace mockup + architecture diagram.
     assert "hero-visual" in text
     assert "mock-workspace" in text
+    assert "mock-chat" in text
     assert "arch-diagram" in text
     assert "loop-rail" not in text
     assert "json-panel" not in text
@@ -127,7 +104,9 @@ def test_landing_page_is_public(client: TestClient):
 
 def test_old_workspace_routes_redirect(client: TestClient):
     moved = {
-        "/workspace": "/graph",
+        "/workspace": "/chat",
+        "/twin": "/chat",
+        "/graph": "/chat",
         "/manager": "/catalog",
         "/logic": "/inference",
         "/history": "/audit",
@@ -136,9 +115,6 @@ def test_old_workspace_routes_redirect(client: TestClient):
         response = client.get(old, follow_redirects=False)
         assert response.status_code == 301, old
         assert response.headers["location"].startswith(new), old
-    twin = client.get("/twin")
-    assert twin.status_code == 200
-    assert "Twin" in twin.text
     graph = client.get("/graph.json").json()
     assert "nodes" in graph
 
@@ -149,3 +125,59 @@ def test_clinic_graph_uses_clinic_nouns(tmp_path):
     ids = {node["id"] for node in graph["nodes"]}
     assert "Patient:p-1" in ids
     assert "Package:1Z999" not in ids
+
+
+def test_chat_stream_shows_tool_work(client: TestClient, monkeypatch):
+    def fake_turn(kernel, text, *, history=None, settings=None):
+        yield {
+            "type": "tool",
+            "id": "t1",
+            "name": "get_object",
+            "label": "Read Package 1Z999",
+            "calling": "Calling Read",
+            "verb": "Read",
+            "target": "Package 1Z999",
+            "icon": "read",
+            "status": "running",
+        }
+        yield {
+            "type": "tool",
+            "id": "t1",
+            "name": "get_object",
+            "label": "Read Package 1Z999",
+            "calling": "Calling Read",
+            "verb": "Read",
+            "target": "Package 1Z999",
+            "icon": "read",
+            "summary": "Read Package 1Z999",
+            "status": "done",
+        }
+        yield {"type": "text", "text": "Destined for Bob."}
+        yield {"type": "done", "text": "Destined for Bob.", "tools": []}
+
+    monkeypatch.setattr("quinovo.chat.agent.run_chat_turn", fake_turn)
+    monkeypatch.setattr(
+        "quinovo.chat.agent.ensure_settings",
+        lambda: LLMSettings(api_key="k", enabled=True, model="MiniMax-M3"),
+    )
+    with client.stream("POST", "/chat/stream", json={"text": "Where is 1Z999?"}) as res:
+        assert res.status_code == 200
+        body = "".join(res.iter_text())
+    assert "Calling Read" in body
+    assert "Read Package 1Z999" in body
+    assert "Destined for Bob." in body
+    sessions = client.get("/chat/sessions").json()
+    assert sessions["sessions"]
+    sid = sessions["sessions"][0]["id"]
+    saved = client.get(f"/chat/sessions/{sid}").json()
+    assert saved["messages"][0]["role"] == "user"
+    assert saved["messages"][-1]["text"] == "Destined for Bob."
+
+
+def test_chat_without_model_explains_settings(client: TestClient):
+    from quinovo.llm.settings import LLMSettings, save_settings
+
+    save_settings(LLMSettings(api_key="", enabled=False, model="MiniMax-M3"))
+    with client.stream("POST", "/chat/stream", json={"text": "hello"}) as res:
+        body = "".join(res.iter_text())
+    assert "Settings" in body

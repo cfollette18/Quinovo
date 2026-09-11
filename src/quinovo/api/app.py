@@ -1,18 +1,25 @@
 from __future__ import annotations
 
+import json
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Form, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import (
+    FileResponse,
+    HTMLResponse,
+    PlainTextResponse,
+    RedirectResponse,
+    StreamingResponse,
+)
 from pydantic import BaseModel, Field
 
 from quinovo.actions.apply import ActionError
 from quinovo.ai.runtime import ProposalError
 from quinovo.apps.audit_view import audit_html
-from quinovo.apps.chrome import wrap
+from quinovo.apps.chat_view import chat_html
 from quinovo.apps.connect_view import config_text, connect_html, signin_html
 from quinovo.apps.connections import config_from_data_form
 from quinovo.apps.inference_view import inference_html
@@ -32,7 +39,8 @@ from quinovo.apps.session import (
 )
 from quinovo.apps.settings_view import settings_html
 from quinovo.apps.train_view import train_html
-from quinovo.apps.twin_view import twin_html
+from quinovo.chat.agent import handle_user_message
+from quinovo.chat.sessions import delete_session, get_session, list_sessions
 from quinovo.kernel import TrainError, open_kernel
 from quinovo.llm.disagreement import ensure_disagreement_dataset
 from quinovo.llm.tracing import flush_langfuse, load_langfuse_env
@@ -41,7 +49,6 @@ from quinovo.workspace import DEFAULT_DB, DEFAULT_PACK, ROOT
 
 __all__ = ["DEFAULT_DB", "DEFAULT_PACK", "ROOT", "create_app"]
 
-DASHBOARD_PAGE = Path(__file__).resolve().parents[1] / "apps" / "dashboard.html"
 CHROME_CSS = Path(__file__).resolve().parents[1] / "apps" / "chrome.css"
 LANDING_CSS = Path(__file__).resolve().parents[1] / "apps" / "landing.css"
 ASSETS_DIR = Path(__file__).resolve().parents[1] / "apps" / "assets"
@@ -103,6 +110,11 @@ class ForecastRequest(BaseModel):
 
 class TickRequest(BaseModel):
     actor: str = "autonomous"
+
+
+class ChatPost(BaseModel):
+    text: str
+    session_id: str = ""
 
 
 class ReviewRequest(BaseModel):
@@ -379,21 +391,45 @@ def create_app(
         db = str(kernel.store.db_path.resolve())
         return PlainTextResponse(config_text(agent_id, pack, db))
 
-    @app.get("/twin", response_class=HTMLResponse)
-    def twin() -> str:
-        return twin_html(pack_name=kernel.ontology.ontology.display_name)
+    @app.get("/chat", response_class=HTMLResponse)
+    def chat_page() -> str:
+        return chat_html(pack_name=kernel.ontology.ontology.display_name)
 
-    @app.get("/graph", response_class=HTMLResponse)
-    def dashboard() -> str:
-        return wrap(
-            "Quinovo",
-            DASHBOARD_PAGE.read_text(encoding="utf-8"),
-            nav="graph",
-        )
+    @app.get("/chat/sessions")
+    def chat_sessions() -> dict[str, Any]:
+        return {"sessions": list_sessions()}
+
+    @app.get("/chat/sessions/{session_id}")
+    def chat_session(session_id: str) -> dict[str, Any]:
+        try:
+            return get_session(session_id).public()
+        except KeyError as exc:
+            raise HTTPException(404, "chat not found") from exc
+
+    @app.delete("/chat/sessions/{session_id}")
+    def chat_delete(session_id: str) -> dict[str, Any]:
+        delete_session(session_id)
+        return {"ok": True}
+
+    @app.post("/chat/stream")
+    def chat_stream(body: ChatPost) -> StreamingResponse:
+        def events():
+            for event in handle_user_message(kernel, body.text, session_id=body.session_id):
+                yield f"data: {json.dumps(event)}\n\n"
+
+        return StreamingResponse(events(), media_type="text/event-stream")
+
+    @app.get("/twin")
+    def twin_moved(request: Request) -> RedirectResponse:
+        return moved_permanently("/chat", request)
+
+    @app.get("/graph")
+    def graph_page_moved(request: Request) -> RedirectResponse:
+        return moved_permanently("/chat", request)
 
     @app.get("/workspace")
     def workspace_moved(request: Request) -> RedirectResponse:
-        return moved_permanently("/graph", request)
+        return moved_permanently("/chat", request)
 
     @app.get("/graph.json")
     def graph() -> dict[str, Any]:

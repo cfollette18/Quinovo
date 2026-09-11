@@ -61,7 +61,7 @@ def test_landing_page_references_favicon(client: TestClient):
 
 
 def test_chrome_references_favicon_and_mark(client: TestClient):
-    html = client.get("/graph").text
+    html = client.get("/chat").text
     assert 'rel="icon" href="/assets/favicon.svg"' in html
     # The new knot-Q mark is inlined in the rail (red focal node).
     assert "#FF3621" in html

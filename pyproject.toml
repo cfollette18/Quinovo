@@ -36,7 +36,6 @@ quinovo = "quinovo.cli:main"
 packages = ["src/quinovo"]
 
 [tool.hatch.build.targets.wheel.force-include]
-"src/quinovo/apps/dashboard.html" = "quinovo/apps/dashboard.html"
 "src/quinovo/apps/chrome.css" = "quinovo/apps/chrome.css"
 "src/quinovo/apps/assets/logo.svg" = "quinovo/apps/assets/logo.svg"
 "src/quinovo/apps/assets/logo-mark.svg" = "quinovo/apps/assets/logo-mark.svg"

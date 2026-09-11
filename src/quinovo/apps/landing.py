@@ -1,6 +1,6 @@
 """Public landing page for Quinovo.
 
-Standalone HTML: split hero with a Graph workspace mockup, a navy how-it-works
+Standalone HTML: split hero with a Chat workspace mockup, a navy how-it-works
 band with an architecture diagram, why-cards with product graphics, an Action
 write-back grid, and MCP agent logo cards. No raw JSON is ever rendered.
 """
@@ -63,11 +63,11 @@ def landing_html(signed_in: bool = False) -> str:
     if signed_in:
         connect_href = "/connect"
         connect_label = "Manage connection"
-        hero_primary_href = "/twin"
+        hero_primary_href = "/chat"
         hero_primary_label = "Open the workspace"
         hero_secondary_href = "/connect"
         hero_secondary_label = "Manage connection"
-        nav_cta_href = "/twin"
+        nav_cta_href = "/chat"
         nav_cta_label = "Open the workspace"
         connect_sub = (
             "You're signed in. Open the guided flow to connect another agent, "
@@ -168,7 +168,7 @@ def landing_html(signed_in: bool = False) -> str:
         <a href="#how">How it works</a>
         <a href="#actions">Actions</a>
         <a href="#connect">Connect</a>
-        <a href="/twin">Workspace</a>
+        <a href="/chat">Workspace</a>
         <a href="{GITHUB_URL}" rel="noopener">GitHub</a>
       </nav>
       <a class="site-cta" href="{nav_cta_href}">{nav_cta_label}</a>
@@ -180,7 +180,7 @@ def landing_html(signed_in: bool = False) -> str:
           <a href="#actions">Actions</a>
           <a href="#faq">Questions</a>
           <a href="#connect">Connect</a>
-          <a href="/twin">Workspace</a>
+          <a href="/chat">Workspace</a>
           <a href="{GITHUB_URL}" rel="noopener">Star on GitHub</a>
         </div>
       </details>
@@ -280,7 +280,7 @@ def landing_html(signed_in: bool = False) -> str:
           <p>Then open your agent and ask it to read the ontology, propose types, or run an action.</p>
           <div class="hero-cta">
             <a class="btn btn-primary" href="{connect_href}">{connect_label}</a>
-            <a class="btn btn-ghost" href="/twin">Open the workspace</a>
+            <a class="btn btn-ghost" href="/chat">Open the workspace</a>
           </div>
         </div>
       </div>
@@ -330,7 +330,7 @@ def landing_html(signed_in: bool = False) -> str:
       </div>
       <nav class="foot-nav">
         <a href="{GITHUB_URL}" rel="noopener">GitHub</a>
-        <a href="/twin">Workspace</a>
+        <a href="/chat">Workspace</a>
         <a href="/settings">Settings</a>
         <a href="/train">Train</a>
       </nav>

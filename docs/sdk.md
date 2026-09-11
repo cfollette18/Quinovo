@@ -29,7 +29,8 @@ The workspace is also an HTTP API (Databricks-styled chrome, JSON behind a toggl
 
 | Surface | Route |
 |---------|-------|
-| Graph | `GET /graph` |
+| Chat | `GET /chat` |
+| Graph payload | `GET /graph.json` |
 | Objects | `GET /objects/{type}`, `GET /objects/{type}/{pk}` |
 | Links | `GET /objects/{type}/{pk}/links/{side}` |
 | Actions | `POST /actions/{action_type}` |

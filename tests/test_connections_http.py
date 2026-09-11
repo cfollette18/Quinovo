@@ -101,7 +101,7 @@ def test_sdk_page_renders(client: TestClient):
 
 
 def test_sources_page_in_nav(client: TestClient):
-    workspace = client.get("/graph").text
+    workspace = client.get("/chat").text
     assert "/sources" in workspace
     assert "Sources" in workspace
 

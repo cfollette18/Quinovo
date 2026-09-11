@@ -31,9 +31,9 @@ Everything concrete maps to the terms below. Banned synonyms must not appear in
 | **proposal** | A suggested pack/type/rule/action change | suggestion |
 | **tick** | One pass of the loop | cycle, iteration |
 | **loop** | The autonomous runtime that ticks | engine (reserved for the storage subpackage) |
-| **workspace** | The web UI as a whole | console, dashboard (the graph page is just **Graph**) |
-| **twin** | The live digital-twin view | — |
-| **scenario** | A what-if overlay on the twin | sandbox, draft |
+| **workspace** | The web UI as a whole | console, dashboard |
+| **chat** | The workspace home — ask the ontology in plain language | twin (as a page), graph (as a page) |
+| **scenario** | A what-if overlay on live objects | sandbox, draft |
 | **series** / **metric** | Time-ordered points on an object / the measured quantity | stream, signal |
 | **kernel** | The orchestrator object | — |
 | **store** | The persistence layer | db, database (as a code concept) |
@@ -45,8 +45,7 @@ Rail order and routes agree with labels:
 
 | Label | Route | Purpose |
 |---|---|---|
-| Twin | `/twin` | The live digital twin — workspace home (public marketing stays at `/`) |
-| Graph | `/graph` | Objects and links canvas |
+| Chat | `/chat` | Ask the ontology — workspace home (public marketing stays at `/`) |
 | Catalog | `/catalog` | Object types, rules, actions defined by the pack |
 | Inference | `/inference` | Facts and the review queue |
 | Sources | `/sources` | Data inlets, logic sources, action targets |

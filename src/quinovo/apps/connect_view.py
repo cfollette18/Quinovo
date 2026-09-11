@@ -199,7 +199,7 @@ def _page_shell(title: str, body: str, signed_in: bool) -> str:
         <a href="/#how">How it works</a>
         <a href="/#actions">Actions</a>
         <a href="/#connect">Connect</a>
-        <a href="/twin">Workspace</a>
+        <a href="/chat">Workspace</a>
         {nav}
       </nav>
     </div>
@@ -215,7 +215,7 @@ def _page_shell(title: str, body: str, signed_in: bool) -> str:
       </div>
       <nav class="foot-nav">
         <a href="{GITHUB_URL}" rel="noopener">GitHub</a>
-        <a href="/twin">Workspace</a>
+        <a href="/chat">Workspace</a>
         <a href="/settings">Settings</a>
       </nav>
       <p class="foot-credit">built by <a href="{GITHUB_URL}" rel="noopener">cfollette18</a></p>
@@ -318,9 +318,9 @@ def connect_html(pack_path: Path, db_path: Path, signed_in: bool = True) -> str:
         <div class="connect-cta">
           <p>Once your agent sees Quinovo, ask it to read the ontology, propose
           types, or run an action. Then come back to the
-          <a href="/twin">workspace</a> to approve what it proposes.</p>
+          <a href="/chat">workspace</a> to approve what it proposes.</p>
           <div class="hero-cta">
-            <a class="btn btn-primary" href="/twin">Open the workspace</a>
+            <a class="btn btn-primary" href="/chat">Open the workspace</a>
             <a class="btn btn-ghost" href="/#connect">Back to landing</a>
           </div>
         </div>

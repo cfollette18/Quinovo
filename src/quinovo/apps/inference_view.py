@@ -20,8 +20,8 @@ def _proposal_cards(proposals: list[dict[str, Any]]) -> str:
         return empty_state(
             "Nothing waiting",
             "Quinovo will ask when it is not sure.",
-            "/graph",
-            "Open the graph",
+            "/chat",
+            "Ask in chat",
         )
     cards = []
     for item in proposals:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import quote
 
 from quinovo.apps.chrome import empty_state, esc, page_head, wrap
 from quinovo.apps.humanize import (
@@ -139,7 +140,7 @@ def _topic_panels(nodes: list[dict[str, Any]]) -> str:
             f"{empty}"
             '<div class="topic-actions">'
             f'<a class="btn btn-primary" href="/view/Topic/{esc(topic_id)}">Open this topic</a>'
-            f'<a class="btn btn-ghost" href="/graph?type=Topic">See on the graph</a>'
+            f'<a class="btn btn-ghost" href="/chat?q={esc(quote(name))}">Ask about this topic</a>'
             "</div>"
             "</article>"
         )
@@ -191,7 +192,7 @@ def _kind_tiles(ontology: Ontology, counts: dict[str, int]) -> str:
     for item in ontology.object_types:
         n = counts.get(item.api_name, 0)
         obj_label = "item" if n == 1 else "items"
-        href = "/graph?type=" + esc(item.api_name)
+        href = "/chat?q=" + esc(quote(f"Show me every {item.api_name}"))
         if item.api_name == "Topic":
             href = "#topics"
         tiles.append(

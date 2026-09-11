@@ -85,13 +85,13 @@ def object_view_html(
     </div>
     <div class="page-actions">{buttons or ""}</div>
   </div>
-  {workspace_tabs("graph")}
+  {workspace_tabs("schema")}
 </div>
 <div class="page">
   <div class="doc">
     <h2>About this</h2>
     <table class="kv">{rows or ""}</table>
-    {"" if rows else empty_state("Nothing recorded yet", "Details show up here as this is filled in.", "/graph", "Back to the graph")}
+    {"" if rows else empty_state("Nothing recorded yet", "Details show up here as this is filled in.", "/chat", "Back to chat")}
     <h2>Connections</h2>
     <ul>{link_bits or "<li class='empty'>No connections yet.</li>"}</ul>
     <h2>What Quinovo noticed</h2>
@@ -130,4 +130,4 @@ def object_view_html(
 }})();
 </script>
 """
-    return wrap(name, body, nav="graph", pack_name=pack_name)
+    return wrap(name, body, nav="schema", pack_name=pack_name)
