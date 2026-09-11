@@ -45,6 +45,22 @@ def _polluted(tmp_path):
         },
         actor="test",
     )
+    kernel.upsert_object(
+        "Memory",
+        {
+            "id": "mem-0123456789ab",
+            "text": "Written by the current extractor.",
+            "kind": "lesson",
+            "confidence": 0.8,
+            "recorded_at": now,
+        },
+        actor="test",
+    )
+    kernel.save_turn("s", 2, "quinovo", "Already read by v2.", actor="test")
+    conv2 = kernel.store.get_object("Conversation", "s:2")
+    kernel.store.upsert_object(
+        "Conversation", {**conv2.properties, "enriched": "v2"}, source="action"
+    )
     for pid, name in (
         ("after", "After"),
         ("if", "If"),
@@ -122,6 +138,8 @@ def test_repair_removes_noise_and_keeps_real_knowledge(tmp_path):
     assert (tmp_path / result["backup"].split("/")[-1]).exists()
     assert kernel.store.get_object("Fact", "fact_s:1_1") is not None
     assert kernel.store.get_object("Memory", "memory_s:1_1") is not None
+    assert kernel.store.get_object("Memory", "mem-0123456789ab") is not None
+    assert kernel.store.get_object("Conversation", "s:2").properties["enriched"] == "v2"
     assert kernel.store.get_object("Person", "cfollette18") is not None
     assert kernel.store.get_object("Person", "chris") is None
     assert kernel.store.get_object("Topic", "harness") is None

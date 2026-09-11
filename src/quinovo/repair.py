@@ -26,6 +26,7 @@ of the database is written first.
 
 from __future__ import annotations
 
+import re
 import sqlite3
 from collections import defaultdict
 from datetime import UTC, datetime
@@ -36,10 +37,13 @@ from quinovo.ai.runtime import ProposalError
 from quinovo.ai.runtime import reject_proposal as reject_stored_proposal
 from quinovo.entities import is_generic
 from quinovo.pack.seed import load_seed_doc
+from quinovo.semantic import EXTRACTOR_VERSION
 from quinovo.topics import PROTECTED_TOPICS, topic_children
 
 JUNK_FACT_PREFIX = "sem-"
 JUNK_MEMORY_PREFIX = "mem-"
+# The current extractor also writes mem-<12 hex>; the retired one embedded the turn id.
+CURRENT_MEMORY_ID = re.compile(r"^mem-[0-9a-f]{12}$")
 JUNK_PROPOSAL_PREFIX = "synth_"
 NOISE_TOPICS = frozenset({"harness", "model", "semantic"})
 ACTOR = "quinovo-repair"
@@ -81,6 +85,26 @@ def _ids(kernel: Any, object_type: str, prefix: str) -> list[str]:
     if not _has_type(kernel, object_type):
         return []
     return [obj.id for obj in kernel.store.list_objects(object_type) if obj.id.startswith(prefix)]
+
+
+def _junk_memories(kernel: Any) -> list[str]:
+    return [
+        memory_id
+        for memory_id in _ids(kernel, "Memory", JUNK_MEMORY_PREFIX)
+        if not CURRENT_MEMORY_ID.match(memory_id)
+    ]
+
+
+def _stale_stamps(kernel: Any) -> list[Any]:
+    """Conversations stamped by an extractor other than the current one."""
+    if not _has_type(kernel, "Conversation"):
+        return []
+    found = []
+    for obj in kernel.store.list_objects("Conversation"):
+        stamp = str((obj.properties or {}).get("enriched") or "")
+        if stamp and stamp != EXTRACTOR_VERSION and not stamp.startswith("claim@"):
+            found.append(obj)
+    return found
 
 
 def _orphan_rules(kernel: Any) -> dict[str, int]:
@@ -162,20 +186,12 @@ def plan(kernel: Any) -> dict[str, Any]:
     """What repair would do, without doing it."""
     return {
         "facts": _ids(kernel, "Fact", JUNK_FACT_PREFIX),
-        "memories": _ids(kernel, "Memory", JUNK_MEMORY_PREFIX),
+        "memories": _junk_memories(kernel),
         "persons": _junk_persons(kernel),
         "orphan_rules": _orphan_rules(kernel),
         "proposals": _junk_proposals(kernel),
         "extra_topic_links": _extra_topic_links(kernel),
-        "conversations": (
-            sum(
-                1
-                for obj in kernel.store.list_objects("Conversation")
-                if (obj.properties or {}).get("enriched")
-            )
-            if _has_type(kernel, "Conversation")
-            else 0
-        ),
+        "conversations": len(_stale_stamps(kernel)),
     }
 
 
@@ -224,15 +240,12 @@ def repair(kernel: Any, *, actor: str = ACTOR, backup: bool = True) -> dict[str,
         kernel.store.delete_object("Topic", topic_id)
     removed["topics"] = len(topics)
 
-    reset = 0
-    if _has_type(kernel, "Conversation"):
-        for obj in kernel.store.list_objects("Conversation"):
-            props = dict(obj.properties or {})
-            if props.pop("enriched", None) is None:
-                continue
-            kernel.store.upsert_object("Conversation", props, source="action")
-            reset += 1
-    removed["conversations_reset"] = reset
+    stale = _stale_stamps(kernel)
+    for obj in stale:
+        props = dict(obj.properties or {})
+        props.pop("enriched", None)
+        kernel.store.upsert_object("Conversation", props, source="action")
+    removed["conversations_reset"] = len(stale)
 
     kernel.store.append_audit("repair", actor, {"removed": removed}, "applied")
     kernel.nudge()
