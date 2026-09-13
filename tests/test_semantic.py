@@ -38,7 +38,10 @@ def test_generic_words_are_never_entities():
     assert is_generic("the user")
     assert is_generic("System")
     assert is_generic("If")
+    assert is_generic("the user's current laptop")
+    assert is_generic("Quinovo chat terminal new repo setup step")
     assert not is_generic("Langfuse")
+    assert not is_generic("Epicor user termination")
     assert normalize_kind("company") == "organization"
     assert normalize_kind("nonsense") == "concept"
 

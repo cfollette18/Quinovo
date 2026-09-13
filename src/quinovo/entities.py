@@ -48,6 +48,13 @@ TRAILING_QUALIFIERS = frozenset(
      "application", "repo", "repository", "database", "db", "api", "sdk", "cli", "ui"}
 )
 LEADING_QUALIFIERS = frozenset({"my", "our", "your", "their", "local", "new", "old"})
+# "the user's laptop", "someone's machine": a possessive on a generic owner is a
+# description, not a name.
+_GENERIC_POSSESSIVE_RE = re.compile(
+    r"^(?:the\s+)?(?:user|users|assistant|agent|team|someone|engineer|author|speaker)'?s?\s+\w",
+    re.IGNORECASE,
+)
+MAX_NAME_WORDS = 5
 _ARTICLE_RE = re.compile(r"^(?:the|a|an)\s+", re.IGNORECASE)
 _WS_RE = re.compile(r"\s+")
 
@@ -78,6 +85,11 @@ def is_generic(name: str) -> bool:
     if not key or key in GENERIC_NAMES:
         return True
     if len(key) < 2:
+        return True
+    if _GENERIC_POSSESSIVE_RE.match(key):
+        return True
+    # Names people say out loud are short; a clause is a description, not a name.
+    if len(key.split()) > MAX_NAME_WORDS:
         return True
     # A bare pronoun-ish or stop-word slug is never an entity.
     return slugify(key) in {"", "-"} or slugify(key) in GENERIC_NAMES
