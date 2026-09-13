@@ -148,7 +148,7 @@ def main() -> None:
                 todo = repair_plan(kernel)
                 print(
                     f"would remove facts={len(todo['facts'])} memories={len(todo['memories'])} "
-                    f"persons={len(todo['persons'])} "
+                    f"persons={len(todo['persons'])} entities={len(todo['entities'])} "
                     f"inferred_facts={sum(todo['orphan_rules'].values())} "
                     f"proposals={len(todo['proposals'])} "
                     f"extra_topic_links={len(todo['extra_topic_links'])}; "

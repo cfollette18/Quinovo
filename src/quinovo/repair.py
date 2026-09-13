@@ -132,6 +132,17 @@ def _junk_persons(kernel: Any) -> list[str]:
     return junk
 
 
+def _junk_entities(kernel: Any) -> list[str]:
+    """Entities whose name fails today's naming rules (descriptions, possessives)."""
+    if not _has_type(kernel, "Entity"):
+        return []
+    return [
+        obj.id
+        for obj in kernel.store.list_objects("Entity")
+        if is_generic(str((obj.properties or {}).get("name") or obj.id))
+    ]
+
+
 def _junk_proposals(kernel: Any) -> list[int]:
     found: list[int] = []
     for proposal in kernel.store.list_proposals("pending"):
@@ -188,6 +199,7 @@ def plan(kernel: Any) -> dict[str, Any]:
         "facts": _ids(kernel, "Fact", JUNK_FACT_PREFIX),
         "memories": _junk_memories(kernel),
         "persons": _junk_persons(kernel),
+        "entities": _junk_entities(kernel),
         "orphan_rules": _orphan_rules(kernel),
         "proposals": _junk_proposals(kernel),
         "extra_topic_links": _extra_topic_links(kernel),
@@ -217,6 +229,10 @@ def repair(kernel: Any, *, actor: str = ACTOR, backup: bool = True) -> dict[str,
     for person_id in persons:
         kernel.store.delete_object("Person", person_id)
     removed["persons"] = len(persons)
+
+    for entity_id in todo["entities"]:
+        kernel.store.delete_object("Entity", entity_id)
+    removed["entities"] = len(todo["entities"])
 
     removed["inferred_facts"] = sum(
         kernel.store.delete_inferred_facts_by_rule(rule) for rule in todo["orphan_rules"]

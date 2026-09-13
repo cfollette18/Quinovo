@@ -103,6 +103,14 @@ def _polluted(tmp_path):
         0.5,
         actor="quinovo-ai",
     )
+    kernel.upsert_object(
+        "Entity",
+        {"id": "user-s-current-laptop", "name": "the user's current laptop", "kind": "place"},
+        actor="test",
+    )
+    kernel.upsert_object(
+        "Entity", {"id": "epicor", "name": "Epicor", "kind": "system"}, actor="test"
+    )
     kernel.upsert_object("Topic", {"id": "harness", "name": "Harness"}, actor="test")
     kernel.upsert_object("Topic", {"id": "langfuse", "name": "Langfuse"}, actor="test")
     kernel.set_link("fact_in_topic", "fact_s:1_1", "langfuse", actor="test")
@@ -115,6 +123,7 @@ def test_plan_names_only_the_noise(tmp_path):
     assert sorted(todo["facts"]) == ["sem-abc0", "sem-abc1", "sem-abc2"]
     assert todo["memories"] == ["mem-1"]
     assert set(todo["persons"]) == {"after", "if"}
+    assert todo["entities"] == ["user-s-current-laptop"]
     assert todo["orphan_rules"] == {"fact_is_topic_fact": 1}
     assert len(todo["proposals"]) == 1
     assert todo["extra_topic_links"] == [("fact_in_topic", "fact_s:1_1", "langfuse")]
@@ -129,6 +138,7 @@ def test_repair_removes_noise_and_keeps_real_knowledge(tmp_path):
         "facts": 3,
         "memories": 1,
         "persons": 3,
+        "entities": 1,
         "inferred_facts": 1,
         "proposals": 1,
         "extra_topic_links": 1,
@@ -142,6 +152,8 @@ def test_repair_removes_noise_and_keeps_real_knowledge(tmp_path):
     assert kernel.store.get_object("Conversation", "s:2").properties["enriched"] == "v2"
     assert kernel.store.get_object("Person", "cfollette18") is not None
     assert kernel.store.get_object("Person", "chris") is None
+    assert kernel.store.get_object("Entity", "user-s-current-laptop") is None
+    assert kernel.store.get_object("Entity", "epicor") is not None
     assert kernel.store.get_object("Topic", "harness") is None
     assert kernel.store.get_object("Topic", "langfuse") is not None
     assert [f.rule for f in kernel.store.list_inferred_facts("Fact", "fact_s:1_1")] == [
@@ -156,6 +168,7 @@ def test_repair_removes_noise_and_keeps_real_knowledge(tmp_path):
         "facts": [],
         "memories": [],
         "persons": [],
+        "entities": [],
         "orphan_rules": {},
         "proposals": [],
         "extra_topic_links": [],
